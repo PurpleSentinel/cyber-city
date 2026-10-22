@@ -49,7 +49,7 @@ Each active host is a procedurally generated building at a stable position, deri
 - **Colour: device class.** For example magenta for IoT, blue for workstations, green for servers. The concept used red for IoT; red is kept for risk (DECISIONS D11).
   - **Feasibility:** heuristic only, combining the MAC vendor (OUI lookup) with the services a host offers and uses. The inspector labels it as a guess.
 - **Shaders: health and status.**
-  - *Normal:* sleek holographic blue/cyan.
+  - *Normal:* solid, lit dark-glass towers tinted by device class, with moonlight shading, cast shadows, reflections, and a holographic cyan rim and edge glow. The city is shaded geometry, never wireframe (DECISIONS D17).
   - *Degraded* (high latency or retransmissions): "digital static" / VHS tracking artefacts.
   - *Traffic spike:* a white flash sweeps from ground to roof, like an elevator charging to the top; large spikes and scan targets also take a lightning strike.
   - **Feasibility:** latency is measured passively from TCP handshake timing (SYN → SYN-ACK → ACK). Loss is approximated from TCP retransmissions and duplicate sequence numbers. Both are available only for TCP flows the sensor sees from the start.

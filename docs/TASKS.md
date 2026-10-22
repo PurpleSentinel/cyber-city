@@ -259,10 +259,29 @@ Spec abbreviations: **P** = PROTOCOL.md, **C** = CONFIG.md, **V** = VISUAL_SPEC.
 - **Do:** fnv1a, block probing, slot probing, Outlands rings and sectors (V).
 - **Done when:** Vitest shows 2000 random ids give no overlapping footprints, the same ids in a different order give identical positions, server districts take the centre block, and sector placement follows V.
 
+### [ ] T3.3a Lighting rig, ground and district plots
+- **Depends:** T3.1, T3.3. **Touches:** `web/src/render/scene.ts`, `web/src/render/ground.ts`, `web/eslint.config.js`.
+- **Do:**
+  - Implement V *Lighting, materials and shading*: renderer tone mapping and colour space, hemisphere light, shadow-casting moon, RoomEnvironment PMREM, lit ground, grid overlay, district plots with emissive borders.
+  - Add the ESLint `no-restricted-syntax` guard against wireframe/basic/edges materials (T *Shading guards*).
+  - Delete the prototype's `GridHelper`-only floor and wireframe material.
+- **Done when:**
+  - The Vitest shading guard for scene, ground and plots passes.
+  - ESLint fails on a deliberately added `wireframe: true` (shown in the PR, then removed).
+  - A screenshot in the PR shows lit plots and ground.
+
 ### [ ] T3.4 Buildings
-- **Depends:** T3.2, T3.3. **Touches:** `web/src/render/buildings.ts`.
-- **Do:** the instanced mesh, per-instance attributes, device-class colours, fade-in and fade-out, instance free list (V).
-- **Done when:** the debug hook's `buildings` count matches the store's host count in a Vitest scene test (three.js runs headless for matrix logic), and the e2e screenshot shows coloured buildings (checked once T3.12 lands).
+- **Depends:** T3.2, T3.3a. **Touches:** `web/src/render/buildings.ts`, `web/src/render/materials.ts`.
+- **Do:**
+  - The instanced mesh with the **lit dark-glass building material** (V): albedo, roughness and metalness, edge accents, fresnel rim, roof cap.
+  - `castShadow`, `receiveShadow` and a matching `customDepthMaterial`.
+  - Per-instance attributes, device-class colours, fade-in and fade-out, instance free list.
+  - Debug hook fields `lit`, `wireframe`, `shadows`, plus `probe` and `pose`.
+- **Done when:**
+  - The debug hook's `buildings` count matches the store's host count in a Vitest scene test.
+  - The Vitest shading guard for the building material and mesh passes.
+  - A PR screenshot at `pose=auto` shows solid, lit buildings casting shadows.
+  - The e2e shading test (T step 5) passes once T3.12 lands.
 
 ### [ ] T3.5 Facade windows
 - **Depends:** T3.4. **Touches:** the building shader.
@@ -286,8 +305,8 @@ Spec abbreviations: **P** = PROTOCOL.md, **C** = CONFIG.md, **V** = VISUAL_SPEC.
 
 ### [ ] T3.9 Post-processing and quality modes
 - **Depends:** T3.4. **Touches:** `web/src/render/post.ts`.
-- **Do:** bloom, OutputPass, low-quality toggle `L`, automatic low quality on software rendering.
-- **Done when:** the debug hook reports `quality` correctly, and the e2e run under SwiftShader shows `low`.
+- **Do:** bloom (threshold 0.85, so lit bodies don't bloom), OutputPass, low-quality toggle `L` (drops shadows, bloom and half the particles, but materials stay lit), automatic low quality on software rendering, and the `quality=` debug override.
+- **Done when:** the debug hook reports `quality` and `shadows` correctly; under SwiftShader the default is `low` with `lit === true`, and `quality=high` turns shadows on.
 
 ### [ ] T3.10 Inspector and picking
 - **Depends:** T3.4. **Touches:** `web/src/ui/inspector.ts`.
@@ -300,9 +319,9 @@ Spec abbreviations: **P** = PROTOCOL.md, **C** = CONFIG.md, **V** = VISUAL_SPEC.
 - **Done when:** a Vitest DOM test covers the HUD formatting, and e2e checks that `Space` toggles `Paused`.
 
 ### [ ] T3.12 End-to-end suite
-- **Depends:** T3.4, T3.7, T3.8, T1.4. **Touches:** `web/e2e`, CI.
-- **Do:** the Playwright flow in T; enable the e2e CI job with the screenshot artifact; check the console for zero CSP violations.
-- **Done when:** the e2e job is green and the screenshot artifact shows the city.
+- **Depends:** T3.4, T3.7, T3.8, T3.9, T1.4. **Touches:** `web/e2e`, CI.
+- **Do:** the Playwright flow in T, including the **shading test** (filled faces, face contrast, cast shadow); enable the e2e CI job with the `city.png` and `shading.png` artifacts; check the console for zero CSP violations.
+- **Done when:** the e2e job is green, and the artifacts show a solid, lit, shadowed city. Temporarily setting the building material to `wireframe: true` makes the shading test fail (demonstrated in the PR, then reverted).
 
 ---
 

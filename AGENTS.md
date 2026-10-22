@@ -96,6 +96,7 @@ Run everything through `make` so local runs and CI match.
 - Pure logic (rates, layout, formulas) lives in modules without three.js imports, so Vitest can test it.
 
 **three.js**
+- The city is solid, lit and shadowed (VISUAL_SPEC *Lighting, materials and shading*, D17). Never use `wireframe: true`, `MeshBasicMaterial` or edge/wireframe geometry for city objects; ESLint and the e2e shading test enforce this.
 - No allocations in the render loop: reuse scratch `Object3D`/`Matrix4`/`Color`.
 - Use instancing for anything that repeats.
 - `dispose()` geometries and materials you replace.

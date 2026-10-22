@@ -39,9 +39,40 @@ Traffic category (particles, highway tint, facade windows):
 
 - `PerspectiveCamera(fov 60, near 0.5, far 2000)`, start position `(170, 140, 170)`, looking at `(0, 0, 0)`.
 - `OrbitControls`: damping 0.08, `maxPolarAngle` 85°, distance 40–700.
-- `FogExp2(bg, 0.0022)`; ground `GridHelper(640, 160, gridMajor, gridMinor)`; `AmbientLight(0x223344, 1)`.
-- Renderer: `antialias: true`, `powerPreference: "high-performance"`, pixel ratio `min(devicePixelRatio, 2)` (forced to 1 in low quality).
-- Post-processing: `UnrealBloomPass(strength 1.1, radius 0.4, threshold 0.15)`, then `OutputPass`.
+- `FogExp2(bg, 0.0022)`.
+- Renderer: `antialias: true`, `powerPreference: "high-performance"`, pixel ratio `min(devicePixelRatio, 2)` (forced to 1 in low quality), `toneMapping: ACESFilmicToneMapping`, `toneMappingExposure: 1.0`, `outputColorSpace: SRGBColorSpace`, `shadowMap.enabled = true` (high quality), `shadowMap.type = PCFSoftShadowMap`.
+- Post-processing chain: `RenderPass` → `UnrealBloomPass(strength 0.9, radius 0.4, threshold 0.85)` → `OutputPass`, which applies tone mapping and sRGB. The threshold is high so that only emissive windows, edges and effects bloom, not the lit building bodies.
+
+## Lighting, materials and shading
+
+**Rule: the city is solid and lit, never wireframe.** Buildings, district plots and the ground use filled, lit `MeshStandardMaterial`s that receive light and shadow. The following are not allowed for city geometry:
+- `wireframe: true`
+- `MeshBasicMaterial`
+- `LineSegments`/`EdgesGeometry` as a building body
+
+Lines are allowed only for the ground grid overlay and the meteor-shower shield effect. Low quality and software rendering keep lit materials; they drop only shadows, bloom and particle count.
+
+**Light rig**
+
+| Light | Settings |
+|---|---|
+| `HemisphereLight` | sky `#1a2a4a`, ground `#05050a`, intensity 0.6 |
+| `DirectionalLight` ("moon") | colour `#9fb8ff`, intensity 1.4. It shines from direction `(0.7, 1.0, −0.3)` (normalised): the light sits at that direction × 400 and targets the origin. +x faces are lit directly while +z faces get only sky and environment light, so adjacent faces always read differently. Shadows fall toward (−0.7, +0.3): about 0.76 × building height long, and visible from the default camera. `castShadow` in high quality: map size 2048², orthographic shadow camera ±300, near 10, far 900, `bias −0.0005`, `normalBias 0.5`. |
+| Environment | `scene.environment = PMREMGenerator.fromScene(new RoomEnvironment(), 0.04).texture`, environment intensity 0.35. Procedural, with no external HDR files. It gives the glass bodies soft reflections. |
+
+**Ground**
+- `PlaneGeometry(640, 640)` laid flat, `MeshStandardMaterial(color #080a12, roughness 0.55, metalness 0.3)`, `receiveShadow`.
+- The grid overlay sits at y = 0.02 with `depthWrite: false`: major lines in `gridMajor` at 35% opacity, minor lines in `gridMinor` at 20%.
+- Each drawn local district has a plot slab of 64 × 0.2 × 64 (top at y = 0.2, buildings stand on it) using `MeshStandardMaterial(color #0b0e1a, roughness 0.6, metalness 0.2)`, `receiveShadow`, with a 0.3-wide emissive border strip in `hud` at intensity 0.4.
+
+**Building material.** One `MeshStandardMaterial`, extended through `onBeforeCompile`; never a `ShaderMaterial`, which would lose three.js lighting. Shaded "dark glass" tinted by device class:
+- **Albedo** `= mix(#0c1020, classColor, 0.25)`, roughness 0.35, metalness 0.6, `side: FrontSide`.
+- **Emissive terms**, added in the fragment shader on top of the lit result:
+  - **Windows** (facade spec below): category colour × 1.6. This is above the bloom threshold, so windows glow.
+  - **Edge accents:** a 0.06-unit band along the 4 vertical edges and the roof perimeter, in `classColor` × 1.2. An accent on a solid body, not a wireframe.
+  - **Fresnel rim:** `classColor × 0.35 × pow(1 − max(dot(N, V), 0), 3)`. Keeps the holographic feel.
+  - **Roof cap:** `classColor × 0.25` on the top face, so roofs read from above.
+- The mesh has `castShadow` and `receiveShadow` on. A `customDepthMaterial` (`MeshDepthMaterial` with the same `onBeforeCompile` dissolve discard and instance attributes) keeps shadows consistent while buildings dissolve or fade.
 
 ## Layout
 
@@ -66,11 +97,11 @@ Everything is deterministic: positions depend only on ids, never on random numbe
 ## Buildings
 
 - One `InstancedMesh` of `BoxGeometry(2, 1, 2)` translated so y ∈ [0, 1], capacity `max_hosts` (2000).
-- Material: a `MeshStandardMaterial` patched with `onBeforeCompile` (or a `ShaderMaterial`) that reads these per-instance attributes:
+- Material: the lit building material above, reading these per-instance attributes:
   - `aColor` (vec3): device-class colour.
   - `aServices` (float, 0–255): category bitmask from the host's `services` (bit order in CONFIG.md).
   - `aState` (vec4): `x` degraded 0–1, `y` flash 0–1, `z` dissolve 0–1, `w` fade-in 0–1.
-- Body: device colour at 35% brightness, plus emissive edges (wireframe-style lines along the box edges at full colour).
+- Body: solid and lit, as defined in *Lighting, materials and shading*. Buildings stand on their district plot (y = 0.2) or on the ground in the Outlands.
 - **Facade windows**: on each of the 4 side faces, the face is split into 6 vertical columns, assigned to the set bits of `aServices` in bit order, repeating if fewer than 6. Within a column, windows are 0.25 wide × 0.5 tall at 1.0 vertical pitch, coloured by category, emissive. The `ssh` column blinks at 2 Hz. A host with no services has dim cyan windows on alternate floors at 15% intensity.
 
 ### Height
@@ -133,7 +164,7 @@ If several events hit the same building, the newest wins. At most 3 searchlights
 - **Event log**, bottom-right: the last 50 events, newest first: time, kind, `src → targets` (first 3 plus `+N`), and an evidence summary. Footer: `Heuristic detections — not an IDS`.
 - **Keys**:
   - `Space`: pause; ticks are dropped while paused and the display freezes.
-  - `L`: toggle low quality (no bloom, half particles, pixel ratio 1).
+  - `L`: toggle low quality (no bloom, no shadows, half particles, pixel ratio 1; materials stay lit).
   - `F`: fly to the selected building.
   - `Esc`: clear the selection.
   - `?`: help overlay.
@@ -147,13 +178,29 @@ When the page URL has `?debug=1`, expose a read-only `window.__cybercity`:
 {
   ready: boolean,                  // true after the first hello has been applied and a frame rendered
   stats(): { buildings: number; highways: number; particles: number; ticks: number;
-             events: number; renderer: string; software: boolean; quality: "high" | "low" },
+             events: number; renderer: string; software: boolean; quality: "high" | "low";
+             lit: boolean;        // every city material is a lit MeshStandardMaterial
+             wireframe: boolean;  // true if any city material has wireframe enabled (must be false)
+             shadows: boolean },
   hostIds(): string[],
   lastEvents(): { id: string; kind: string }[],
+  // Screen-space (CSS px) points for shading tests:
+  //   px, pz: corners of the building's +x and +z side faces
+  //   shadow: ground point at centre + (−0.35h, +0.15h), inside the cast shadow
+  //   lit:    ground point at centre + (+0.15h, +0.35h), same distance, outside the shadow
+  //   sameSurface: both ground points lie on the same district plot (or both on bare ground)
+  probe(hostId: string): { px: [number, number][]; pz: [number, number][];
+                           shadow: [number, number]; lit: [number, number];
+                           sameSurface: boolean } | null,
+  poseHost(): string | null,   // the host the camera is locked on (pose=…), once chosen
 }
 ```
+Extra debug-only URL parameters (they only change the view, never the data):
+- `quality=high|low` forces the quality mode, including under software rendering.
+- `pose=auto` waits until 10 s of tick time have been applied, then locks onto the busiest local host whose displayed height is ≥ 10 and whose `probe` has `sameSurface === true`, re-checking each second until one qualifies.
+- `pose=host:<id>` fixes the camera at `(x + d, 0.6·h + 6, z + d)` with `d = max(14, 0.9·h)`, where `(x, z)` is the building's position and `h` its displayed height. It looks at the building's mid-height and disables orbit input. The +x and +z faces are then visible and lit differently by the moon.
 It is never a write path. Tests reach it through the `/auth` redirect: `/auth?token=…&next=%2F%3Fdebug%3D1` (PROTOCOL.md).
 
 ## Performance budget
 
-At 2000 buildings, 500 highways and 5000 particles: 60 fps on a mid-range integrated GPU, at most 3 draw calls for the city layers excluding post-processing, and no per-frame allocations in the render loop. `Object3D`, `Matrix4` and `Color` scratch objects are reused.
+At 2000 buildings, 500 highways and 5000 particles with shadows on: 60 fps on a mid-range integrated GPU. At most 4 draw calls for the city layers (plots, buildings, highways, particles) plus 1 shadow-pass draw for buildings, excluding post-processing. No per-frame allocations in the render loop. `Object3D`, `Matrix4` and `Color` scratch objects are reused.
