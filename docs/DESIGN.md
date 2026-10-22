@@ -46,7 +46,7 @@ Each active host is a procedurally generated building at a stable position, deri
 - **Height and mass: bandwidth.** A host running a large download or backup becomes a dominant skyscraper; a quiet smart fridge stays low-rise. Height tracks the *recent* rate (bytes/sec with decay on a log scale), so the skyline breathes instead of saturating.
 - **Facade windows: active services.** Vertical neon window columns light up per service port in use: a blue column for 80/443 (HTTP/S), a sharp white blinking segment for 22 (SSH), and so on.
   - **Feasibility:** a passive sensor sees ports that are *in use*, not ports that are *open*. A host that answers a TCP SYN with SYN-ACK is marked as offering that service; this never involves scanning.
-- **Colour: device class.** For example red for IoT, blue for workstations, green for servers.
+- **Colour: device class.** For example magenta for IoT, blue for workstations, green for servers. The concept used red for IoT; red is kept for risk (DECISIONS D11).
   - **Feasibility:** heuristic only, combining the MAC vendor (OUI lookup) with the services a host offers and uses. The inspector labels it as a guess.
 - **Shaders: health and status.**
   - *Normal:* sleek holographic blue/cyan.
@@ -90,6 +90,30 @@ A busy network produces thousands of packets per second, and drawing one object 
 - **Backend: Go + gopacket/libpcap.** Chosen over Python/scapy for throughput on gigabit links without dropping packets, and over C++ for safety and a single static binary.
 - **Frontend: three.js (WebGL)** in the browser, with post-processing bloom for the neon look. No install is needed beyond the binary, and moving to WebGPU later is possible. Babylon.js was the comparable 3D option; PixiJS or p5.js would suit a 2D view such as the radar.
 - **Out of scope:** Unreal Engine 5 / Unity "war room" desktop builds. They would offer higher fidelity but defeat the single-binary, browser-based design.
+
+## Rendering and delivery
+
+- **Engine:** three.js renders through WebGL on the viewer's GPU, so it is hardware accelerated. Nothing needs installing beyond a modern browser.
+- **Delivery:** `vite build` produces a static bundle that is embedded in the Go binary. One process captures, aggregates and serves the page and the WebSocket on one origin (`http://127.0.0.1:8080`).
+- **Remote viewing:** a headless sensor can be viewed from another machine over an SSH tunnel (`ssh -L 8080:127.0.0.1:8080 sensor`), which keeps the loopback-only default.
+- **Software fallback:** if the browser falls back to software rendering (SwiftShader, llvmpipe), the HUD warns and the app switches to low quality (VISUAL_SPEC.md).
+
+## Threat model (summary)
+
+- **Assets:** traffic metadata about the local network and its users.
+- **Adversaries:**
+  - malicious web pages in the viewer's browser (cross-site WebSocket hijacking)
+  - other hosts on the LAN
+  - other local users
+- **Mitigations:**
+  - loopback bind
+  - one-time token exchanged for an HttpOnly, SameSite=Strict cookie
+  - Origin allow-list
+  - CSP
+  - no payloads (snaplen 256)
+  - capabilities instead of root, with privileges dropped after opening the capture
+  - an optional anonymize mode for recordings
+- **Out of scope:** a compromised local root account; viewers the owner deliberately shares the link with.
 
 ## Alternative views (future)
 
