@@ -2,6 +2,12 @@
 
 CyberCity-3D is a real-time network traffic visualizer that transforms live network packet data captured from a promiscuous network interface into a procedurally generated, cinematic 3D metropolis.
 
+> **Status: early prototype.** Today it draws a wireframe building per host whose height grows with traffic. See [ROADMAP.md](ROADMAP.md) for the plan and [docs/DESIGN.md](docs/DESIGN.md) for the full concept.
+>
+> **Visibility:** on a switched network, promiscuous mode only sees broadcast/multicast traffic and this host's own traffic. To see every host, capture from a SPAN/mirror port or a network TAP.
+>
+> **Security:** the current sniffer's WebSocket is unauthenticated and listens on all interfaces. Run it only on a trusted network until Milestone 1 lands.
+
 ## 🚀 Getting Started
 
 ### 1. Run the Backend Sniffer
