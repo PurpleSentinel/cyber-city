@@ -366,7 +366,7 @@ Split into two PRs (AGENTS.md size rule):
 - **Do:** as V; free the instance afterwards.
 - **Done when:** Vitest checks the dissolve timeline and that the instance returns to the free list.
 
-### [ ] T4.8 Event log
+### [x] T4.8 Event log
 - **Depends:** T3.11, T4.1. **Touches:** `web/src/ui/eventlog.ts`.
 - **Do:** as V, including the "not an IDS" footer and the concurrency caps.
 - **Done when:** a Vitest DOM test checks formatting and the 50-entry limit, and e2e sees a log entry.

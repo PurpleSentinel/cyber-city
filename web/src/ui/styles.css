@@ -108,3 +108,68 @@ body {
   text-shadow: 0 0 5px #ff2040;
   font-weight: bold;
 }
+
+#eventlog {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  width: 420px;
+  max-height: 40vh;
+  display: flex;
+  flex-direction: column;
+  padding: 8px 12px;
+  background: rgba(5, 5, 10, 0.8);
+  border: 1px solid rgba(0, 240, 255, 0.5);
+  font-size: 11px;
+  z-index: 140;
+}
+
+#eventlog h2 {
+  margin: 0 0 6px;
+  font-size: 13px;
+}
+
+#eventlog ol {
+  flex: 1;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-y: auto;
+}
+
+#eventlog li {
+  display: grid;
+  grid-template-columns: max-content 70px 1fr;
+  gap: 0 8px;
+  padding: 2px 0;
+  border-bottom: 1px solid rgba(0, 240, 255, 0.12);
+}
+
+#eventlog li .evidence {
+  grid-column: 2 / 4;
+  opacity: 0.7;
+}
+
+#eventlog li .parties {
+  overflow-wrap: anywhere;
+}
+
+#eventlog li.alert .kind {
+  color: #ff2040;
+  text-shadow: 0 0 4px #ff2040;
+}
+
+#eventlog li.warn .kind {
+  color: #ffb000;
+}
+
+#eventlog .footer {
+  margin: 6px 0 0;
+  opacity: 0.6;
+  font-style: italic;
+}
+
+#eventlog ol:empty::before {
+  content: "No events yet";
+  opacity: 0.5;
+}
