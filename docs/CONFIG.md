@@ -19,7 +19,7 @@ Precedence: built-in defaults < config file (`--config`) < command-line flags.
 | `--loop` | false | Restart the file at EOF. Timestamps are shifted so time keeps increasing. |
 | `--dump-json <path\|->` | none | Write `hello` + every `tick` as JSON Lines and exit at EOF; no HTTP server. Implies `--replay-speed 0`. Requires `--read`. |
 | `--bpf <expr>` | none | Capture filter (live: libpcap; file: `pcap.NewBPF`, which needs libpcap; without it, an error explains the limitation). |
-| `--snaplen <n>` | `256` | Bytes captured per packet (DECISIONS D8). Must be ≥ 128. |
+| `--snaplen <n>` | `256` | Bytes captured per packet (DECISIONS D8). Range 128–65535. |
 | `--no-promisc` | false | Disable promiscuous mode. |
 | `--user <name>` | `nobody` when started as root | Drop to this user after opening the capture handle. `--user root` keeps root and logs a `WARN`. |
 | `--show-mac` | false | Include MAC addresses in Host objects. |

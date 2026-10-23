@@ -57,7 +57,7 @@ Spec abbreviations: **P** = PROTOCOL.md, **C** = CONFIG.md, **V** = VISUAL_SPEC.
   - Mirror the types in TS, plus a small runtime validator (no schema library needed).
 - **Done when:** the Go round-trip test passes, the TS conformance test passes, and changing a field name on only one side fails CI.
 
-### [ ] T0.5 Configuration package
+### [x] T0.5 Configuration package
 - **Depends:** T0.2. **Touches:** `internal/config`, `config/cybercity.example.yaml`.
 - **Do:** implement the defaults, YAML loading (`gopkg.in/yaml.v3`), flags and precedence from C. Validate ranges (window 50ms–1s, snaplen ≥ 128, district id regex, `geoip` requires `geo.home`, `--read` and `--iface` mutually exclusive, `--dump-json` requires `--read`).
 - **Done when:**
