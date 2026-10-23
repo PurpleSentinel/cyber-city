@@ -274,7 +274,7 @@ Split into two PRs (AGENTS.md size rule):
   - ESLint fails on a deliberately added `wireframe: true` (shown in the PR, then removed).
   - A screenshot in the PR shows lit plots and ground.
 
-### [ ] T3.4 Buildings
+### [x] T3.4 Buildings
 - **Depends:** T3.2, T3.3a. **Touches:** `web/src/render/buildings.ts`, `web/src/render/materials.ts`.
 - **Do:**
   - The instanced mesh with the **lit dark-glass building material** (V): albedo, roughness and metalness, edge accents, fresnel rim, roof cap.
