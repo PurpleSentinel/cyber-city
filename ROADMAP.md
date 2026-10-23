@@ -1,80 +1,58 @@
 # CyberCity-3D Roadmap
 
-Goal: keep the core idea — a Go service captures live traffic and streams it to a three.js city where hosts are buildings and activity drives height — while making the project safe by default, correct, and verifiable. The full concept (districts, buildings, highways, events, alternative views) and the feasibility of each mapping are in [docs/DESIGN.md](docs/DESIGN.md).
+Goal: keep the core idea — a Go service captures live traffic and streams it to a three.js city where hosts are buildings and activity drives height — while making the project safe by default, correct, and verifiable.
+
+This page is the overview. The build is specified in:
+
+| Doc | Contents |
+|---|---|
+| [docs/DESIGN.md](docs/DESIGN.md) | The concept and what passive capture can really deliver |
+| [docs/TASKS.md](docs/TASKS.md) | PR-sized tasks with dependencies and "Done when" checks: **the source of truth for progress** |
+| [docs/PROTOCOL.md](docs/PROTOCOL.md) | Backend ↔ browser contract (endpoints, auth, message schema) |
+| [docs/CONFIG.md](docs/CONFIG.md) | Flags, defaults, thresholds, classification rules |
+| [docs/VISUAL_SPEC.md](docs/VISUAL_SPEC.md) | Palette, layout geometry, formulas, effect timings, HUD |
+| [docs/TESTING.md](docs/TESTING.md) | Fixtures, golden tests, security tests, e2e, CI |
+| [docs/DECISIONS.md](docs/DECISIONS.md) | Settled choices |
+| [AGENTS.md](AGENTS.md) | How to work in this repo (commands, workflow, hard rules) |
 
 ## Principles
-- **Safe by default** — with no flags, nothing is reachable except from this machine, by this visualizer.
-- **Honest claims** — the README describes what it actually does, with a screenshot/GIF. Heuristics are labelled as heuristics; this is a visualizer, not an IDS.
-- **Metadata only** — packet payloads are never inspected or transmitted.
-- **Verifiable** — tests, CI, and a pcap-replay demo anyone can reproduce.
+- **Safe by default**: with no flags, nothing is reachable except from this machine, by this visualizer.
+- **Honest claims**: the README describes what it actually does. Heuristics are labelled as heuristics; this is a visualizer, not an IDS.
+- **Metadata only**: packet payloads are never inspected or transmitted.
+- **Verifiable**: tests, CI, synthetic pcap fixtures and a replay demo anyone can reproduce.
 
-## Milestone 1 — Safe by default
+## Milestone 0: Foundations (T0.x)
+Toolchain and Makefile, restructure into one Go module plus `web/` (TypeScript), CI, protocol types with cross-language conformance tests, the config package, the OUI vendor table, a synthetic pcap fixture generator, and `--read` replay with packet-time windows and golden tests. Everything after this can be verified by CI.
+
+## Milestone 1: Safe by default (T1.x)
 | Problem | Fix |
 |---|---|
-| `CheckOrigin` returns true (any website can read the feed) | Strict origin allow-list; serve the frontend from the Go binary via `embed` so page and WebSocket share one origin. |
-| Listens on `:8080` (all interfaces) | Default bind `127.0.0.1:8080`; `--listen` flag with a loud warning for non-loopback. |
-| No authentication | Random per-run token printed as a ready-to-open URL (`http://127.0.0.1:8080/?token=…`); WebSocket rejects requests without it. |
-| `sudo go run` | Build a binary and grant `setcap cap_net_raw,cap_net_admin+eip`; if started as root, open the capture handle then drop privileges. |
-| Privacy | Payloads never sent (already true); MAC addresses opt-in; `--anonymize` hashes/truncates IPs for screen recordings. |
-| Slow-client stall | Per-client buffered send channel with write deadlines, drop slow clients; `SetReadLimit`; max client count. |
-| Unmaintained dependency | Move from `google/gopacket` to the maintained `gopacket/gopacket` fork; commit `go.sum`; enable Dependabot. |
+| `CheckOrigin` returns true (any website can read the feed) | Strict Origin allow-list; the frontend is served from the Go binary via `embed`, so page and WebSocket share one origin. |
+| Listens on `:8080` (all interfaces) | Default bind `127.0.0.1:8080`; `--listen` with a loud warning for non-loopback. |
+| No authentication | A per-run token printed as `http://127.0.0.1:8080/auth?token=…`, exchanged for an HttpOnly, SameSite=Strict session cookie; `/ws` requires the cookie and an allowed Origin. |
+| `sudo go run` | Build a binary and grant `setcap cap_net_raw,cap_net_admin+eip`; if started as root, open the capture handle, then drop to `nobody`. |
+| Privacy | Payloads never sent; snaplen 256; MAC addresses opt-in; `--anonymize` for screen recordings. |
+| Slow-client stall | Per-client queues with write deadlines; slow clients dropped; read limit; max clients. |
+| Supply chain | Maintained `gopacket/gopacket` fork, `go.sum`, Dependabot, `govulncheck`, SECURITY.md. |
 
-## Milestone 2 — Correct, enriched data
-Capture:
-- `--iface` / `--list-ifaces`; default to the default-route interface instead of `devices[0]`.
-- `--bpf "tcp or udp"` capture filter.
-- IPv6 support; 802.1Q VLAN tags parsed.
-- Flow key `(proto, src, dst, service port)` where service port is the lower of the two ports; OR TCP flags across packets.
-- `--read capture.pcap` replay mode for reproducible demos and tests; the mock generator becomes `--mock` or replays a bundled sample pcap so it cannot drift from the real schema.
+## Milestone 2: Correct, enriched data (T2.x)
+Interface selection, BPF filters, IPv6/ICMP/VLAN decoding, flow keying with service-port rules and traffic categories, the host table, then passive enrichment: active services, handshake RTT, retransmissions, MAC vendor with gateway detection, heuristic device class, districts (config, VLAN or automatic), optional offline GeoIP sectors, and capture drop stats.
 
-Per-host and per-flow enrichment (all passive):
-- **Active services** per host: ports seen in use, and services confirmed by the host answering SYN with SYN-ACK.
-- **Handshake RTT** from SYN → SYN-ACK → ACK timing; **retransmission / duplicate-sequence counts** as a loss proxy.
-- **MAC vendor** via a bundled OUI table; heuristic **device class** (IoT / workstation / server) from vendor and services.
-- **Districts** from a `districts.yaml` CIDR → name map (e.g. `10.0.1.0/24: Corporate`, `10.0.9.0/24: Server Core`), VLAN tags, or automatic grouping.
-- Optional **GeoIP** sector for external hosts from a user-supplied offline GeoLite2 database (`--geoip path.mmdb`); no external lookups.
+## Milestone 3: The city (T3.x)
+- **Districts**: Corporate/LAN grid, Server Core at the centre, the Outlands ring placed by compass sector.
+- **Buildings**: height follows the current bandwidth (log scale, decays when quiet); facade windows show active services; colour shows device class; shaders show degraded, spike and lightning states.
+- **Traffic**: highways between talking hosts; particle freight coloured by category, moving at RTT-based speed; bloom.
+- **Interface**: inspector, HUD, software-rendering warning, low-quality mode, a Playwright e2e suite with screenshots.
 
-Protocol:
-- Versioned message schema `{ "v": 1, "ts": …, "flows": [...], "hosts": [...], "events": [...] }`, documented in `docs/protocol.md`.
+## Milestone 4: Events (T4.x)
+Heuristic detectors and their effects: port scan → Searchlight, flood/DDoS → Meteor Shower, host gone dark → Power Outage. Plus an event log labelled "Heuristic — not an IDS".
 
-## Milestone 3 — The city
-Layout:
-- **Districts**: Corporate/LAN as a dense orderly grid, Server Core as monoliths behind force-fields, the Outlands as a chaotic ring on the horizon, placed by GeoIP compass sector when available.
-- **Stable positions**: each address hashes to a fixed slot within its district, so buildings never overlap and the city is recognisable across sessions.
-
-Buildings:
-- **Height = current bandwidth**: bytes/sec with exponential decay on a log scale, so the skyline breathes rather than saturating.
-- **Facade windows = active services**: e.g. a blue column for 80/443, a blinking white segment for 22.
-- **Colour = device class** (heuristic, labelled as such in the inspector).
-- **Shaders**: holographic cyan when normal; digital-static/VHS artefacts when RTT or retransmissions are high; a ground-to-roof white flash on traffic spikes; `UnrealBloomPass` for the neon look.
-
-Traffic:
-- **Highways** between hosts that are talking, with lane width = throughput.
-- **Particle freight** for aggregated packets: green HTTPS, yellow DNS, red cleartext/legacy/unknown. Speed follows the handshake RTT when known.
-
-Interface:
-- **Hover/click inspector**: IP, MAC vendor, district, services, bytes/sec, RTT; optional reverse DNS, off by default.
-- **Lifecycle**: idle hosts fade out; least-recently-used eviction at capacity; capped particle counts.
-- **HUD**: packets/sec, host count, connection state; auto-reconnect with backoff; pause.
-
-## Milestone 4 — Events
-Backend detectors emit `events`; the frontend plays a cinematic effect and lists each event, with its evidence, in an on-screen log. Thresholds are configurable.
-- **Port scan → the Searchlight**: one source probing many ports/hosts with mostly incomplete handshakes; a red searchlight sweeps from the scanner across its targets.
-- **Flood / DDoS → the Meteor Shower**: rate to one destination far above its baseline from many sources; red sky, particles rain on the target, force-field flickers.
-- **Host gone dark → the Power Outage**: idle past timeout; windows flicker, the building dissolves into the grid.
-- Tests replay crafted pcaps (e.g. an `nmap -sS` capture) and assert the expected events.
-- The UI and README state that these are heuristics and point to Suricata/Zeek for real detection; the event schema allows external alerts to be fed in later.
-
-## Milestone 5 — Credibility and release
-- Layout: `cmd/cybercity`, `internal/capture`, `internal/aggregate`, `internal/enrich`, `internal/detect`, `internal/server`, `web/` (embedded).
-- Tests: Go unit tests with crafted packets, pcap-fixture golden tests, origin/token rejection tests; Vitest for layout and decay logic.
-- CI: `go vet`, `golangci-lint`, `govulncheck`, tests, frontend build.
-- Releases via goreleaser; `LICENSE`; `SECURITY.md`.
-- README: GIF, architecture diagram, no-root quick start (`--read sample.pcap`), security model, and **deployment visibility**: on a switched network promiscuous mode sees only broadcast/multicast and the host's own traffic, so whole-network views need a SPAN/mirror port or a network TAP.
+## Milestone 5: Credibility and release (T5.x)
+Licence (owner's choice), goreleaser builds for Linux amd64/arm64, a README rewrite (recording, architecture diagram, no-root replay quick start, SPAN/TAP visibility, security model, GPU note), and performance baselines.
 
 ## Later
 - Alternative views on the same data stream: Star Cluster / Node Graph, Radial Sonar / Radar, Particle Vortex (see DESIGN.md).
-- WebGPU renderer.
+- WebGPU renderer; Suricata EVE alerts as events; macOS.
 
 ## Order
-Ship Milestone 1 as its own change first, since it removes the real risk. Then Milestones 2 and 3 together (replay mode makes the visuals testable), then Milestone 4 (events depend on the enrichment from Milestone 2), then Milestone 5.
+M0 first, because every later task depends on its CI, fixtures and replay. Then M1 on its own, since it removes the real risk. Then M2 and M3 (frontend tasks can run in parallel with backend enrichment once T3.1 is in), then M4 (needs M2's enrichment), then M5.

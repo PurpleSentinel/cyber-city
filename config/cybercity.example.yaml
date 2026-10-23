@@ -1,0 +1,59 @@
+# CyberCity-3D example configuration. Every value shown is the built-in default
+# (docs/CONFIG.md); internal/config tests assert they stay in sync.
+# Flags override values in this file.
+
+listen: 127.0.0.1:8080
+allow_origins: []          # e.g. ["http://localhost:5173"] for the Vite dev server
+iface: ""                  # empty = default-route interface
+bpf: ""
+snaplen: 256
+promiscuous: true
+user: ""                   # empty = "nobody" when started as root
+show_mac: false
+anonymize: false
+districts: ""              # path to a districts file, see districts.example.yaml
+geoip: ""                  # path to a GeoLite2-City .mmdb (optional)
+window: 100ms
+max_hosts: 2000
+log_level: info
+
+server:
+  max_clients: 4
+  client_queue: 32
+  write_timeout: 2s
+  ping_interval: 15s
+  heartbeat: 1s
+
+flows:
+  max_tracked: 50000
+
+hosts:
+  idle_timeout: 120s
+  max_services: 16
+
+enrich:
+  handshake_timeout: 10s
+  rtt_samples: 20
+  retrans_window: 30s
+  class_interval: 10s
+  gateway_min_ips: 5
+
+detect:
+  scan:
+    window: 10s
+    min_ports: 50
+    min_hosts: 20
+    min_incomplete_ratio: 0.8
+    udp_min_ports: 100
+    cooldown: 60s
+  flood:
+    window: 5s
+    baseline_half_life: 60s
+    min_history: 30s
+    multiplier: 10
+    min_pps: 2000
+    min_sources: 50
+    cooldown: 60s
+
+geo:
+  home: null               # [lat, lon]; required when geoip is set
