@@ -430,6 +430,11 @@ func (p *Pipeline) removeIdle(now time.Time) {
 	}
 	for _, h := range p.hosts {
 		if now.Sub(h.lastSeen) >= p.opts.IdleTimeout {
+			if h.local {
+				if ev, ok := p.det.Emit(now, detect.HostIdle(h.addr, p.opts.IdleTimeout), p.id.hostID); ok {
+					p.events = append(p.events, ev)
+				}
+			}
 			p.remove(h)
 		}
 	}

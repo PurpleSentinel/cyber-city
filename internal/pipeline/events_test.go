@@ -1,6 +1,7 @@
 package pipeline
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/PurpleSentinel/cyber-city/internal/protocol"
@@ -50,6 +51,26 @@ func TestFloodFixture(t *testing.T) {
 	start := ts[0].TS + 40_000
 	if e.Dst == nil || *e.Dst != "10.0.9.5" || e.Src != nil || e.Evidence["distinct_sources"] < 50 || e.TS < start || e.TS > start+5_000 {
 		t.Fatalf("flood event %+v (flood starts at %d)", e, start)
+	}
+}
+
+func TestIdleFixture(t *testing.T) {
+	ts := ticks(t, runFixture(t, "idle", testOptions()))
+	var n int
+	for _, tk := range ts {
+		for _, e := range tk.Events {
+			if e.Kind != protocol.EventHostIdle {
+				continue
+			}
+			n++
+			at := tk.TS - ts[0].TS
+			if *e.Src != "10.0.1.30" || at < 129_000 || at > 131_000 || !slices.Contains(tk.RemovedHosts, "10.0.1.30") {
+				t.Fatalf("host_idle %+v at %d ms, removed %v", e, at, tk.RemovedHosts)
+			}
+		}
+	}
+	if n != 1 {
+		t.Fatalf("host_idle events = %d, want 1", n)
 	}
 }
 
