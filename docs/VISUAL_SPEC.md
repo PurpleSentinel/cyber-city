@@ -56,17 +56,17 @@ Lines are allowed only for the ground grid overlay and the meteor-shower shield 
 
 | Light | Settings |
 |---|---|
-| `HemisphereLight` | sky `#1a2a4a`, ground `#05050a`, intensity 0.6 |
-| `DirectionalLight` ("moon") | colour `#9fb8ff`, intensity 1.4. It shines from direction `(0.7, 1.0, −0.3)` (normalised): the light sits at that direction × 400 and targets the origin. +x faces are lit directly while +z faces get only sky and environment light, so adjacent faces always read differently. Shadows fall toward (−0.7, +0.3): about 0.76 × building height long, and visible from the default camera. `castShadow` in high quality: map size 2048², orthographic shadow camera ±300, near 10, far 900, `bias −0.0005`, `normalBias 0.5`. |
-| Environment | `scene.environment = PMREMGenerator.fromScene(new RoomEnvironment(), 0.04).texture`, environment intensity 0.35. Procedural, with no external HDR files. It gives the glass bodies soft reflections. |
+| `HemisphereLight` | sky `#1a2a4a`, ground `#05050a`, intensity 0.35 |
+| `DirectionalLight` ("moon") | colour `#9fb8ff`, intensity 4. It shines from direction `(0.7, 1.0, −0.3)` (normalised): the light sits at that direction × 400 and targets the origin. +x faces are lit directly while +z faces get only sky and environment light, so adjacent faces always read differently. Shadows fall toward (−0.7, +0.3): about 0.76 × building height long, and visible from the default camera. `castShadow` in high quality: map size 2048², orthographic shadow camera ±300, near 10, far 900, `bias −0.0005`, `normalBias 0.5`. |
+| Environment | `scene.environment = PMREMGenerator.fromScene(new RoomEnvironment(), 0.04).texture`, environment intensity 0.3. Procedural, with no external HDR files. It gives the glass bodies soft reflections. |
 
 **Ground**
-- `PlaneGeometry(640, 640)` laid flat, `MeshStandardMaterial(color #080a12, roughness 0.55, metalness 0.3)`, `receiveShadow`.
+- `PlaneGeometry(640, 640)` laid flat, `MeshStandardMaterial(color #10131f, roughness 0.9, metalness 0)` (matte, so moonlight and shadow read clearly), `receiveShadow`.
 - The grid overlay sits at y = 0.02 with `depthWrite: false`: major lines in `gridMajor` at 35% opacity, minor lines in `gridMinor` at 20%.
-- Each drawn local district has a plot slab of 64 × 0.2 × 64 (top at y = 0.2, buildings stand on it) using `MeshStandardMaterial(color #0b0e1a, roughness 0.6, metalness 0.2)`, `receiveShadow`, with a 0.3-wide emissive border strip in `hud` at intensity 0.4.
+- Each drawn local district has a plot slab of 64 × 0.2 × 64 (top at y = 0.2, buildings stand on it) using `MeshStandardMaterial(color #141a2e, roughness 0.9, metalness 0)`, `receiveShadow`, with a 0.3-wide emissive border strip in `hud` at intensity 0.4.
 
 **Building material.** One `MeshStandardMaterial`, extended through `onBeforeCompile`; never a `ShaderMaterial`, which would lose three.js lighting. Shaded "dark glass" tinted by device class:
-- **Albedo** `= mix(#0c1020, classColor, 0.25)`, roughness 0.35, metalness 0.6, `side: FrontSide`.
+- **Albedo** `= mix(#0c1020, classColor, 0.25)`, roughness 0.35, metalness 0.25, `side: FrontSide`.
 - **Emissive terms**, added in the fragment shader on top of the lit result:
   - **Windows** (facade spec below): category colour × 1.6. This is above the bloom threshold, so windows glow.
   - **Edge accents:** a 0.06-unit band along the 4 vertical edges and the roof perimeter, in `classColor` × 1.2. An accent on a solid body, not a wireframe.
@@ -186,18 +186,23 @@ When the page URL has `?debug=1`, expose a read-only `window.__cybercity`:
   lastEvents(): { id: string; kind: string }[],
   // Screen-space (CSS px) points for shading tests:
   //   px, pz: corners of the building's +x and +z side faces
-  //   shadow: ground point at centre + (−0.35h, +0.15h), inside the cast shadow
-  //   lit:    ground point at centre + (+0.15h, +0.35h), same distance, outside the shadow
-  //   sameSurface: both ground points lie on the same district plot (or both on bare ground)
+  //   shadow: ground point at centre + (−0.49h, +0.21h), on the cast shadow's centre line
+  //   lit:    ground point at centre + (+0.21h, +0.49h), same distance, outside the shadow
+  //   sameSurface: both ground points lie on the same district plot (or both on bare ground),
+  //                neither within 1.5 units of a plot's emissive border
+  //   ring: ground points at radii 0.35h and 0.5h, 48 per circle, angle in degrees
+  //         from +x toward +z (shadows fall toward ≈157°)
   probe(hostId: string): { px: [number, number][]; pz: [number, number][];
                            shadow: [number, number]; lit: [number, number];
-                           sameSurface: boolean } | null,
+                           sameSurface: boolean;
+                           ring: { deg: number; x: number; y: number }[] } | null,
   poseHost(): string | null,   // the host the camera is locked on (pose=…), once chosen
 }
 ```
 Extra debug-only URL parameters (they only change the view, never the data):
 - `quality=high|low` forces the quality mode, including under software rendering.
-- `pose=auto` waits until 10 s of tick time have been applied, then locks onto the busiest local host whose displayed height is ≥ 10 and whose `probe` has `sameSurface === true`, re-checking each second until one qualifies.
+- `pose=auto` waits until 10 s of tick time have been applied, then locks onto the busiest local host whose displayed height is ≥ 10, whose `probe` has `sameSurface === true`, and whose ground sample points are clear: neither within 2.5 units of another building, and the lit point not in another building's shadow.
+- `hide=traffic` hides highways, particles and lightning, so the shading test measures buildings and ground only.
 - `pose=host:<id>` fixes the camera at `(x + d, 0.6·h + 6, z + d)` with `d = max(14, 0.9·h)`, where `(x, z)` is the building's position and `h` its displayed height. It looks at the building's mid-height and disables orbit input. The +x and +z faces are then visible and lit differently by the moon.
 It is never a write path. Tests reach it through the `/auth` redirect: `/auth?token=…&next=%2F%3Fdebug%3D1` (PROTOCOL.md).
 

@@ -51,21 +51,21 @@ export const SCENE = {
 } as const;
 
 export const LIGHTING = {
-  hemisphere: { sky: 0x1a2a4a, ground: 0x05050a, intensity: 0.6 },
-  moon: { color: 0x9fb8ff, intensity: 1.4, direction: [0.7, 1.0, -0.3] as const, distance: 400 },
+  hemisphere: { sky: 0x1a2a4a, ground: 0x05050a, intensity: 0.35 },
+  moon: { color: 0x9fb8ff, intensity: 4, direction: [0.7, 1.0, -0.3] as const, distance: 400 },
   shadow: { mapSize: 2048, extent: 300, near: 10, far: 900, bias: -0.0005, normalBias: 0.5 },
-  environment: { sigma: 0.04, intensity: 0.35 },
+  environment: { sigma: 0.04, intensity: 0.3 },
   toneMappingExposure: 1.0,
 } as const;
 
 export const MATERIALS = {
-  ground: { color: 0x080a12, roughness: 0.55, metalness: 0.3 },
-  plot: { color: 0x0b0e1a, roughness: 0.6, metalness: 0.2, height: 0.2, borderWidth: 0.3, borderIntensity: 0.4 },
+  ground: { color: 0x10131f, roughness: 0.9, metalness: 0 },
+  plot: { color: 0x141a2e, roughness: 0.9, metalness: 0, height: 0.2, borderWidth: 0.3, borderIntensity: 0.4 },
   building: {
     baseColor: 0x0c1020,
     tint: 0.25,
     roughness: 0.35,
-    metalness: 0.6,
+    metalness: 0.25,
     windowIntensity: 1.6,
     edgeWidth: 0.06,
     edgeIntensity: 1.2,

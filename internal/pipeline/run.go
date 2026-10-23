@@ -22,9 +22,13 @@ type Sink interface {
 }
 
 type frame struct {
-	data []byte
-	ci   gopacket.CaptureInfo
+	data    []byte
+	ci      gopacket.CaptureInfo
+	restart bool // first frame after a looped file rewound
 }
+
+// restarter is implemented by sources that can loop (capture.File).
+type restarter interface{ Restarted() bool }
 
 // replayClock maps wall time to packet time for paced replay.
 type replayClock struct {
@@ -97,8 +101,12 @@ func Run(ctx context.Context, src capture.Source, p *Pipeline, sink Sink, speed 
 			if clock != nil && !clock.sleepUntilWall(ctx, clock.due(ci.Timestamp)) {
 				return
 			}
+			restart := false
+			if r, ok := src.(restarter); ok {
+				restart = r.Restarted()
+			}
 			select {
-			case frames <- frame{data, ci}:
+			case frames <- frame{data, ci, restart}:
 			case <-ctx.Done():
 				return
 			}
@@ -138,6 +146,9 @@ func Run(ctx context.Context, src capture.Source, p *Pipeline, sink Sink, speed 
 					return ctx.Err()
 				}
 				return err
+			}
+			if f.restart {
+				p.ResetConnections()
 			}
 			if err := emit(p.Frame(f.data, f.ci)); err != nil {
 				return err

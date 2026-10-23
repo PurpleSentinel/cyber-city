@@ -130,6 +130,19 @@ func (p *Pipeline) Frame(data []byte, ci gopacket.CaptureInfo) []*protocol.Tick 
 	return ticks
 }
 
+// ResetConnections forgets per-connection state (server-side decisions,
+// pending handshakes, sequence tracking) when a looped file restarts, so the
+// replayed connections are not mistaken for retransmissions. Hosts, rates and
+// classes are kept.
+func (p *Pipeline) ResetConnections() {
+	p.tracker = NewServerTracker(p.opts.MaxTracked)
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.rtt = enrich.NewRTT(p.opts.HandshakeTimeout, max(1, p.opts.MaxTracked), max(1, p.opts.RTTSamples))
+	p.retx = enrich.NewRetrans(p.opts.RetransWindow, max(1, p.opts.MaxTracked))
+	clear(p.flowRTT)
+}
+
 // SetDrops records cumulative capture drop counters for the next tick.
 func (p *Pipeline) SetDrops(kernel, iface uint64) { p.kernelDrops, p.ifDrops = kernel, iface }
 

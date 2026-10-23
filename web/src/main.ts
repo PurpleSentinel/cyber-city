@@ -12,7 +12,7 @@ import { Buildings } from "./render/buildings";
 import { Lightning } from "./render/effects/lightning";
 import { Highways } from "./render/highways";
 import { Particles } from "./render/particles";
-import { poseFor, probe } from "./render/probe";
+import { clearSamples, poseFor, probe } from "./render/probe";
 import { rendererInfo } from "./render/rendererInfo";
 import { QualityController, createComposer } from "./render/quality";
 import { Plots, addLights, configureRenderer, createGround, setEnvironment } from "./render/scene";
@@ -208,6 +208,14 @@ store.subscribe({
   },
 });
 
+// Debug view option: ?hide=traffic hides highways, particles and lightning so
+// the shading test measures buildings and ground only (view-only, no data).
+if (params.get("hide") === "traffic") {
+  highways.mesh.visible = false;
+  particles.mesh.visible = false;
+  lightning.group.visible = false;
+}
+
 // ---- Fixed camera poses for tests (?pose=auto | host:<id>) -------------------
 const poseParam = params.get("pose");
 let poseHost: string | null = poseParam?.startsWith("host:") ? poseParam.slice(5) : null;
@@ -220,12 +228,13 @@ function choosePoseHost(): string | null {
   if (lastTickTs - firstTickTs < 10_000) return null; // 10 s of tick time
   let best: string | null = null;
   let bestRate = -1;
-  for (const id of buildings.ids()) {
-    const g = buildings.geometry(id);
+  const all = buildings.ids().map((id) => ({ id, g: buildings.geometry(id) }));
+  for (const { id, g } of all) {
     if (!g || !g.local || g.height < 10) continue;
     const pr = probe(g, camera, window.innerWidth, window.innerHeight, blockCentres());
+    const others = all.flatMap((o) => (o.id !== id && o.g ? [o.g] : []));
     const rate = buildings.rateOf(id);
-    if (pr.sameSurface && rate > bestRate) {
+    if (pr.sameSurface && clearSamples(g, others) && rate > bestRate) {
       best = id;
       bestRate = rate;
     }
@@ -233,15 +242,21 @@ function choosePoseHost(): string | null {
   return best;
 }
 
-function applyPose(): void {
+/**
+ * Places the camera for a fixed pose and reports whether one is active. The
+ * orbit controls are bypassed: they would clamp the camera to minDistance.
+ */
+function applyPose(): boolean {
   if (poseParam === "auto" && !poseHost) poseHost = choosePoseHost();
-  if (!poseHost) return;
+  if (!poseHost) return false;
   const g = buildings.geometry(poseHost);
-  if (!g) return;
+  if (!g) return false;
   const { position, target } = poseFor(g);
   camera.position.copy(position);
+  camera.lookAt(target);
   controls.target.copy(target);
   controls.enabled = false;
+  return true;
 }
 
 // ---- HUD -------------------------------------------------------------------
@@ -339,13 +354,13 @@ function animate(now?: number): void {
   buildings.frame(dt, timer.getElapsed());
   lightning.frame(dt);
   particles.frame(dt);
-  applyPose();
+  const posed = applyPose();
   stepFlight(dt);
   if (inspector.selected && store.ticks - inspectedAt >= 10) {
     inspectedAt = store.ticks; // refresh about once a second of ticks
     showInspector(inspector.selected);
   }
-  controls.update();
+  if (!posed) controls.update();
   composer.render(dt);
   if (!rendered && store.server) {
     rendered = true;

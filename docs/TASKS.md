@@ -322,7 +322,7 @@ Split into two PRs (AGENTS.md size rule):
 - **Do:** HUD fields, pause, the help overlay (V).
 - **Done when:** a Vitest DOM test covers the HUD formatting, and e2e checks that `Space` toggles `Paused`.
 
-### [ ] T3.12 End-to-end suite
+### [x] T3.12 End-to-end suite
 - **Depends:** T3.4, T3.7, T3.8, T3.9, T1.4. **Touches:** `web/e2e`, CI.
 - **Do:** the Playwright flow in T, including the **shading test** (filled faces, face contrast, cast shadow); enable the e2e CI job with the `city.png` and `shading.png` artifacts; check the console for zero CSP violations.
 - **Done when:** the e2e job is green, and the artifacts show a solid, lit, shadowed city. Temporarily setting the building material to `wireframe: true` makes the shading test fail (demonstrated in the PR, then reverted).

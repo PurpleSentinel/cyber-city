@@ -21,6 +21,8 @@ export interface ProbeResult {
   shadow: [number, number];
   lit: [number, number];
   sameSurface: boolean;
+  /** Ground points around the building (degrees from +x toward +z, screen px). */
+  ring: { deg: number; x: number; y: number }[];
 }
 
 export interface DebugSources {
