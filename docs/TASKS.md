@@ -104,7 +104,7 @@ Split into two PRs (AGENTS.md size rule):
 
 ## Milestone 1: Safe by default
 
-### [ ] T1.1 Loopback bind and remote warning
+### [x] T1.1 Loopback bind and remote warning
 - **Depends:** T0.5. **Touches:** `internal/server`, `cmd/cybercity`.
 - **Do:** default `127.0.0.1:8080`; `--listen` with port 0 support; WARN for non-loopback hosts (C wording); `--url-file`.
 - **Done when:** the T security table rows for `--listen` pass.

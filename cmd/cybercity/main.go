@@ -58,7 +58,6 @@ func notYet(cfg config.Config) error {
 		{cfg.ListIfaces, "--list-ifaces", "T2.1"},
 		{cfg.Iface != "", "--iface", "T2.1"},
 		{cfg.BPF != "", "--bpf", "T2.2"},
-		{cfg.URLFile != "", "--url-file", "T1.1"},
 		{cfg.User != "", "--user", "T1.6"},
 		{cfg.Districts != "", "--districts", "T2.11"},
 		{cfg.GeoIP != "", "--geoip", "T2.12"},
@@ -90,17 +89,26 @@ func run(ctx context.Context, cfg config.Config) error {
 		return dumpJSON(ctx, cfg.DumpJSON, src, p)
 	}
 
+	ln, err := server.Listen(cfg.Listen, slog.Default())
+	if err != nil {
+		return err
+	}
+	url := server.BaseURL(ln.Addr())
+	if cfg.URLFile != "" {
+		if err := server.WriteURLFile(cfg.URLFile, url); err != nil {
+			_ = ln.Close()
+			return fmt.Errorf("url file: %w", err)
+		}
+	}
+
 	hub := server.NewHub(p.Snapshot)
 	srv := &http.Server{
-		Addr:              cfg.Listen,
 		Handler:           server.Handler(hub, web.Dist()),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 	serveErr := make(chan error, 1)
-	go func() {
-		slog.Info("serving", "url", "http://"+cfg.Listen)
-		serveErr <- srv.ListenAndServe()
-	}()
+	go func() { serveErr <- srv.Serve(ln) }()
+	slog.Info("ready", "url", url)
 	defer func() {
 		shutdown, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()

@@ -15,6 +15,9 @@ updates:
       # typescript-eslint supports typescript <6.1 (docs/DECISIONS.md D18).
       - dependency-name: typescript
         versions: [">=6.1.0"]
+      # Types track the Node 22 runtime pinned in .nvmrc.
+      - dependency-name: "@types/node"
+        versions: [">=23.0.0"]
   - package-ecosystem: github-actions
     directory: /
     schedule:
