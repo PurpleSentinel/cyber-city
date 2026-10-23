@@ -130,6 +130,29 @@ func TestHandshakeRTT(t *testing.T) {
 	}
 }
 
+// docs/TESTING.md retrans row: retrans_rate 0.05 ± 0.01; web_https 0.
+func TestRetransmissionRate(t *testing.T) {
+	ts := ticks(t, runFixture(t, "retrans", testOptions()))
+	rate := lastHosts(ts)["203.0.113.10"].RetransRate
+	if rate < 0.04 || rate > 0.06 {
+		t.Fatalf("retrans_rate %.3f, want 0.05 ± 0.01", rate)
+	}
+	var flowRetrans int
+	for _, tk := range ts {
+		for _, f := range tk.Flows {
+			flowRetrans += f.Retrans
+		}
+	}
+	if flowRetrans == 0 {
+		t.Fatal("no flow reported retransmissions")
+	}
+	for id, h := range lastHosts(ticks(t, runFixture(t, "web_https", testOptions()))) {
+		if h.RetransRate != 0 {
+			t.Fatalf("web_https host %s retrans_rate %v, want 0", id, h.RetransRate)
+		}
+	}
+}
+
 func TestScanProbesDoNotCreateServices(t *testing.T) {
 	h := lastHosts(ticks(t, runFixture(t, "scan_syn", testOptions())))["10.0.9.5"]
 	// Only the two open ports answered with SYN-ACK.

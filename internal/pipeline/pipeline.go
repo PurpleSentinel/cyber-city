@@ -25,6 +25,8 @@ type Options struct {
 	// HandshakeTimeout and RTTSamples tune handshake RTT (enrich.*).
 	HandshakeTimeout time.Duration
 	RTTSamples       int
+	// RetransWindow is the per-host retransmission-rate window.
+	RetransWindow time.Duration
 	// Server describes the sensor in hello messages.
 	Server protocol.ServerInfo
 	// Anonymize pseudonymises host ids and hides addresses (--anonymize).
@@ -45,6 +47,7 @@ type flowAgg struct {
 	packets uint64
 	bytes   uint64
 	flags   uint8
+	retrans int
 }
 
 // Pipeline aggregates packet records into protocol ticks. Add and Advance
@@ -54,6 +57,7 @@ type Pipeline struct {
 	id      *identity
 	svc     *enrich.Services
 	rtt     *enrich.RTT
+	retx    *enrich.Retrans
 	flowRTT map[flowKey]float64 // most recent handshake RTT per flow key
 	dec     *Decoder
 	tracker *ServerTracker
@@ -83,6 +87,7 @@ func New(opts Options) *Pipeline {
 		svc:       enrich.NewServices(max(1, opts.MaxServices)),
 		rtt:       enrich.NewRTT(opts.HandshakeTimeout, max(1, opts.MaxTracked), max(1, opts.RTTSamples)),
 		flowRTT:   make(map[flowKey]float64),
+		retx:      enrich.NewRetrans(opts.RetransWindow, max(1, opts.MaxTracked)),
 		dec:       NewDecoder(),
 		tracker:   NewServerTracker(opts.MaxTracked),
 		flows:     make(map[flowKey]*flowAgg),
@@ -135,6 +140,15 @@ func (p *Pipeline) add(r *Record) {
 	p.touch(r.Dst, r.TS)
 	p.observeService(r, &d)
 	p.observeHandshake(r, &d, key)
+	if r.Proto == ProtoTCP && r.PayloadLen > 0 {
+		dir := enrich.Direction{From: netip.AddrPortFrom(r.Src, r.SrcPort), To: netip.AddrPortFrom(r.Dst, r.DstPort)}
+		if p.retx.Segment(dir, r.Seq, r.PayloadLen, r.TS) {
+			f.retrans++
+			if h := p.hosts[r.Src]; h != nil {
+				h.dirty = true
+			}
+		}
+	}
 	p.mu.Unlock()
 }
 
@@ -274,7 +288,7 @@ func (p *Pipeline) tick(end time.Time) *protocol.Tick {
 		wf := protocol.Flow{
 			Src: p.id.hostID(k.src), Dst: p.id.hostID(k.dst), Proto: k.proto.String(),
 			Category: Category(k.proto, nil), Packets: f.packets, Bytes: f.bytes,
-			TCPFlags: FlagNames(f.flags),
+			TCPFlags: FlagNames(f.flags), Retrans: f.retrans,
 		}
 		if k.hasPort {
 			port := k.port
@@ -361,5 +375,6 @@ func (p *Pipeline) remove(h *hostState) {
 	delete(p.hosts, h.addr)
 	p.svc.Forget(h.addr)
 	p.rtt.Forget(h.addr)
+	p.retx.Forget(h.addr)
 	p.removed = append(p.removed, p.id.hostID(h.addr))
 }

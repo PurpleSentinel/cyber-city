@@ -32,6 +32,7 @@ func testOptions() Options {
 		MaxServices:      16,
 		HandshakeTimeout: 10 * time.Second,
 		RTTSamples:       20,
+		RetransWindow:    30 * time.Second,
 		Server:           protocol.ServerInfo{Version: "test", Source: "file"},
 	}
 }

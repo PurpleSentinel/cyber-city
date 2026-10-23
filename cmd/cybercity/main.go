@@ -96,6 +96,7 @@ func run(ctx context.Context, cfg config.Config) error {
 		MaxServices:      cfg.Hosts.MaxServices,
 		HandshakeTimeout: cfg.Enrich.HandshakeTimeout.D(),
 		RTTSamples:       cfg.Enrich.RTTSamples,
+		RetransWindow:    cfg.Enrich.RetransWindow.D(),
 		Server:           info,
 		Anonymize:        cfg.Anonymize,
 	})
