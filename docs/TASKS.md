@@ -130,7 +130,7 @@ Split into two PRs (AGENTS.md size rule):
 - **Do:** serve the embedded `dist` with the P headers. Move all inline styles and scripts out of `index.html`.
 - **Done when:** the T header row passes, and the built page loads with no CSP violations in the browser console (checked in e2e once T3.12 lands; until then, manual and described in the PR).
 
-### [ ] T1.5 Client fan-out hardening
+### [x] T1.5 Client fan-out hardening
 - **Depends:** T1.2. **Touches:** `internal/server/hub.go`.
 - **Do:**
   - A hub with a per-client buffered channel (`client_queue`), a writer goroutine per client with `write_timeout`, close code 1013 on overflow.

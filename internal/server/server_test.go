@@ -24,7 +24,9 @@ type testServer struct {
 	auth *Auth
 }
 
-func newTestServer(t *testing.T) *testServer {
+func newTestServer(t *testing.T) *testServer { return newTestServerWith(t, DefaultHubOptions()) }
+
+func newTestServerWith(t *testing.T, opts HubOptions) *testServer {
 	t.Helper()
 	auth, err := NewAuth()
 	if err != nil {
@@ -33,7 +35,7 @@ func newTestServer(t *testing.T) *testServer {
 	static := fstest.MapFS{"index.html": {Data: []byte("<title>CyberCity-3D</title>")}}
 	srv := httptest.NewUnstartedServer(nil)
 	// Allowed origins come from the real listener, as in cmd/cybercity.
-	hub := NewHub(protocol.ExampleHello, AllowedOrigins(srv.Listener.Addr(), []string{"http://localhost:5173"}))
+	hub := NewHub(protocol.ExampleHello, AllowedOrigins(srv.Listener.Addr(), []string{"http://localhost:5173"}), opts)
 	srv.Config.Handler = Handler(hub, static, auth)
 	srv.Start()
 	t.Cleanup(srv.Close)

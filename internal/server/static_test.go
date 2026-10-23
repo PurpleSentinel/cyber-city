@@ -17,7 +17,7 @@ func TestSecurityHeadersOnEveryResponse(t *testing.T) {
 		"assets/index-a.js":  {Data: []byte("console.log(1)")},
 		"assets/index-a.css": {Data: []byte("body{}")},
 	}
-	h := Handler(NewHub(nil, nil), static, auth)
+	h := Handler(NewHub(nil, nil, DefaultHubOptions()), static, auth)
 
 	cases := []struct {
 		path    string
