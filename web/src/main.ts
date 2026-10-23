@@ -14,6 +14,7 @@ import { Highways } from "./render/highways";
 import { Particles } from "./render/particles";
 import { poseFor, probe } from "./render/probe";
 import { rendererInfo } from "./render/rendererInfo";
+import { QualityController, createComposer } from "./render/quality";
 import { Plots, addLights, configureRenderer, createGround, setEnvironment } from "./render/scene";
 import { HighwayModel } from "./state/highways";
 import { bytesByHost } from "./state/rate";
@@ -46,11 +47,12 @@ controls.maxPolarAngle = (CAMERA.maxPolarAngleDeg * Math.PI) / 180;
 controls.minDistance = CAMERA.minDistance;
 controls.maxDistance = CAMERA.maxDistance;
 
-addLights(scene, quality);
+const { moon } = addLights(scene, quality);
 const pmrem = new THREE.PMREMGenerator(renderer);
 setEnvironment(scene, pmrem.fromScene(new RoomEnvironment(), LIGHTING.environment.sigma).texture);
 pmrem.dispose();
-scene.add(createGround());
+const ground = createGround();
+scene.add(ground);
 const plots = new Plots();
 scene.add(plots.mesh);
 const buildings = new Buildings();
@@ -62,6 +64,30 @@ const highways = new Highways();
 scene.add(highways.mesh);
 const particles = new Particles(quality === "low");
 scene.add(particles.mesh);
+
+// ---- Post-processing and quality (key L) ---------------------------------------
+const { composer, bloom } = createComposer(renderer, scene, camera);
+const groundMaterials: THREE.Material[] = [];
+ground.traverse((o) => {
+  if (o instanceof THREE.Mesh && o.material instanceof THREE.MeshStandardMaterial) groundMaterials.push(o.material);
+});
+const qualityCtl = new QualityController(
+  {
+    renderer,
+    moon,
+    materials: [buildings.mesh.material as THREE.Material, plots.mesh.material as THREE.Material, ...groundMaterials],
+    particles: particles.system,
+    bloom,
+    devicePixelRatio: window.devicePixelRatio,
+  },
+  quality,
+);
+window.addEventListener("keydown", (e) => {
+  if ((e.key === "l" || e.key === "L") && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    qualityCtl.toggle();
+    composer.setPixelRatio(renderer.getPixelRatio());
+  }
+});
 
 function endpoint(id: string) {
   const g = buildings.geometry(id);
@@ -184,10 +210,10 @@ const debug = debugEnabled()
         events: store.events.length,
         renderer: gpu.name,
         software: gpu.software,
-        quality,
+        quality: qualityCtl.mode,
         lit: buildings.mesh.material instanceof THREE.MeshStandardMaterial,
         wireframe: (buildings.mesh.material as THREE.MeshStandardMaterial).wireframe,
-        shadows: renderer.shadowMap.enabled && buildings.mesh.castShadow,
+        shadows: qualityCtl.shadows && buildings.mesh.castShadow,
       }),
       hostIds: () => buildings.ids(),
       lastEvents: () => store.events.map((e) => ({ id: e.id, kind: e.kind })),
@@ -221,7 +247,7 @@ function animate(now?: number): void {
   particles.frame(dt);
   applyPose();
   controls.update();
-  renderer.render(scene, camera);
+  composer.render(dt);
   if (!rendered && store.server) {
     rendered = true;
     debug?.markReady();
@@ -233,4 +259,5 @@ window.addEventListener("resize", () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
+  composer.setSize(window.innerWidth, window.innerHeight);
 });
