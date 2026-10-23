@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 // Command cybercity captures network metadata and serves the 3D city view.
 package main
 

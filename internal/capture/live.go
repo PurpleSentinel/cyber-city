@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 // Package capture opens packet sources: live interfaces (libpcap) and capture files.
 package capture
 

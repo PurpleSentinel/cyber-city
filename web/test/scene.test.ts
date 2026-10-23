@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 // Shading guards (docs/TESTING.md "Shading guards"): lit, filled materials and
 // the documented light rig. three.js scene objects work without WebGL.
 import * as THREE from "three";

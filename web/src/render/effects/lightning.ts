@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 // Lightning strikes (docs/VISUAL_SPEC.md "Status effects"): a jagged additive
 // line from y = 200 down to a roof, three segments re-randomised every 50 ms,
 // lasting 0.4 s.

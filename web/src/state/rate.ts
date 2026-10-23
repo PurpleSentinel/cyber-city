@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 // Rate and height model (docs/VISUAL_SPEC.md "Height"). Pure functions: no
 // three.js, so Vitest can check the formulas directly.
 import { RATE } from "../config";

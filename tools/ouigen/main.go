@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 // Command ouigen converts the IEEE MA-L registry CSV into a Go lookup table
 // (docs/DECISIONS.md D9). Run via `make oui` (go generate in internal/enrich).
 package main

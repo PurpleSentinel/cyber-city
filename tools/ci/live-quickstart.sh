@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
 # CI check (docs/TASKS.md T5.3): the README's live quick start,
 # `make setcap && bin/cybercity`, captures as an unprivileged user.
 set -euo pipefail

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { backoffDelayMs } from "../src/net/backoff";

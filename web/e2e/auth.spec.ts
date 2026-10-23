@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 // docs/TESTING.md "End-to-end" step 7: without the token the page holds no data.
 import { expect, test } from "@playwright/test";
 import { baseURL, watchProblems } from "./util";

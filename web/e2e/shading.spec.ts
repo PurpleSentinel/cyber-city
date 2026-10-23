@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 // docs/TESTING.md "End-to-end" step 5: the city is solid, lit and shadowed,
 // never wireframe (D17). Measured from pixels at a fixed camera pose.
 import { expect, test } from "@playwright/test";

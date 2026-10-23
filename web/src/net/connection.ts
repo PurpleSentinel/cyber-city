@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 // WebSocket connection manager (docs/PROTOCOL.md "Client behaviour"):
 // session check → open /ws → hello → ticks in seq order; on a seq gap or a
 // disconnect, reconnect with backoff and rebuild from the next hello.

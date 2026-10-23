@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 // Power outage for host_idle events (docs/VISUAL_SPEC.md "Event effects"):
 // the windows flicker at random for 2 s, then the building dissolves over 3 s
 // while it sinks; the instance is freed afterwards.

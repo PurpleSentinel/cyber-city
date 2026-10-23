@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 // Package detect turns packet metadata into heuristic events: port scans,
 // floods and hosts going dark (docs/CONFIG.md "Event detectors"). These are
 // visualisation heuristics, not an IDS (DECISIONS D14).

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 // Package server serves the embedded frontend and streams protocol messages
 // to browsers over WebSocket.
 package server

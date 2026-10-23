@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 // Status-effect triggers (docs/VISUAL_SPEC.md "Status effects"). Pure.
 import { STATUS } from "../config";
 

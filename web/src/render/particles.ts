@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 // Particle freight rendering (docs/VISUAL_SPEC.md "Particle freight"):
 // instanced small boxes oriented along their road, additive, category colour.
 import * as THREE from "three";

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 // v1 wire protocol. Mirrors docs/PROTOCOL.md and internal/protocol; change all
 // three together. Clients ignore unknown fields and unknown enum values.
 

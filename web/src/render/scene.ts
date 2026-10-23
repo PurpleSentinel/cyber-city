@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 // Lighting rig, ground and district plots (docs/VISUAL_SPEC.md "Lighting,
 // materials and shading"). The city is solid and lit, never wireframe (D17).
 import * as THREE from "three";

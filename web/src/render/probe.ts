@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 // Screen-space probes and fixed camera poses for the e2e shading test
 // (docs/VISUAL_SPEC.md "Debug hook", TESTING.md "Shading test").
 import * as THREE from "three";

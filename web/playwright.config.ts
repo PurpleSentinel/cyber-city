@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import { defineConfig } from "@playwright/test";
 
 // End-to-end suite (docs/TESTING.md "End-to-end"). The global setup starts

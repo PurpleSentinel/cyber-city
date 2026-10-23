@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 // Helpers for the e2e suite: login URL, debug-hook access, PNG pixel stats.
 import { mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";

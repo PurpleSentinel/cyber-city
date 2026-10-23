@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import * as THREE from "three";
 import { describe, expect, it } from "vitest";
 import { PARTICLES } from "../src/config";

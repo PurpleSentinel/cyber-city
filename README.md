@@ -96,4 +96,8 @@ The backend aggregates packets into 100 ms windows of packet time and sends one 
 
 ## Status
 
-The capture pipeline, the security model, the city and the event effects are complete (milestones M0–M4). Release packaging is in place, but the licence (T5.1) and the first tagged release are still for the owner to decide.
+The capture pipeline, the security model, the city and the event effects are complete (milestones M0–M4). Release packaging is in place, and the first tagged release is up to the owner.
+
+## Licence
+
+[MIT](LICENSE) © 2026 PurpleSentinel. The generated OUI vendor table (`internal/enrich/oui_table.go`) is derived from the IEEE MA-L public registry.

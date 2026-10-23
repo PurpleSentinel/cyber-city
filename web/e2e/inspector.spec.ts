@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 // T3.10: clicking a building opens the inspector for that host.
 import { expect, test } from "@playwright/test";
 import { authURL, waitReady } from "./util";

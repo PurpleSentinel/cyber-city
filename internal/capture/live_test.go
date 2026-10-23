@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 //go:build live
 
 // Live-capture smoke test (docs/TESTING.md "Layers"). Needs libpcap and

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 // Every visual constant from docs/VISUAL_SPEC.md. Renderer code imports from
 // here and never hard-codes values (AGENTS.md conventions).
 

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 // Command perfcheck compares performance results with the stored baseline
 // (docs/TASKS.md T5.4) and exits non-zero on a regression beyond the
 // tolerance. Inputs: `go test -bench BenchmarkReplay` output and the e2e

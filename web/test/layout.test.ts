@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import { describe, expect, it } from "vitest";
 import { LAYOUT } from "../src/config";
 import { fnv1a32 } from "../src/layout/hash";

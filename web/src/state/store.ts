@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 // Client-side view of the city, rebuilt from each hello and updated by ticks
 // (docs/PROTOCOL.md "Client behaviour"). Renderers subscribe to changes.
 import { HUD } from "../config";

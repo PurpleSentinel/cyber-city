@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 // Additive glow material for highways and particles: per-instance colour and
 // alpha, no lighting (these are light trails, not city geometry).
 import * as THREE from "three";

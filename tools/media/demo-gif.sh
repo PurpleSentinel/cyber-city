@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
 # Turns the e2e recording (web/e2e/artifacts/demo.webm, from
 # web/e2e/record.spec.ts) into docs/media/demo.gif: 10 s around the demo's
 # port scan, 720 px wide, 8 fps. Needs ffmpeg. Run via `make media`.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 // Command fixturegen writes the synthetic capture fixtures and test GeoIP
 // database under testdata/ (docs/TESTING.md "Fixtures"). Output is
 // byte-identical on every run; CI fails if the committed files differ.
