@@ -18,7 +18,7 @@ make build     # builds the frontend and embeds it in bin/cybercity
 sudo bin/cybercity
 ```
 
-Then open http://127.0.0.1:8080. One process captures traffic and serves the page.
+Then open the URL it prints (`http://127.0.0.1:8080/auth?token=…`): the one-time token logs your browser in, so other web pages and users cannot read the feed. One process captures traffic and serves the page.
 
 **No root needed:** replay the bundled synthetic capture instead of capturing live:
 

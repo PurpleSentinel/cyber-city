@@ -109,7 +109,7 @@ Split into two PRs (AGENTS.md size rule):
 - **Do:** default `127.0.0.1:8080`; `--listen` with port 0 support; WARN for non-loopback hosts (C wording); `--url-file`.
 - **Done when:** the T security table rows for `--listen` pass.
 
-### [ ] T1.2 Token and session cookie
+### [x] T1.2 Token and session cookie
 - **Depends:** T1.1. **Touches:** `internal/server/auth.go`, `web/src/net/session.ts`.
 - **Do:**
   - Per-run 32-byte token, printed as `http://<addr>/auth?token=…`.

@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { INVALID_LINK_MESSAGE, checkSession } from "./net/session";
 import { parseMessage } from "./protocol";
 import "./ui/styles.css";
 
@@ -65,13 +66,7 @@ const setStatus = (text: string): void => {
   if (statusDiv) statusDiv.textContent = text;
 };
 
-// Same origin as the page: the Go binary serves both (docs/DECISIONS.md D3).
-const wsUrl = new URL("/ws", window.location.href);
-wsUrl.protocol = wsUrl.protocol === "https:" ? "wss:" : "ws:";
-const ws = new WebSocket(wsUrl);
-ws.onopen = () => setStatus("WS: Connected Live");
-ws.onclose = () => setStatus("WS: Disconnected");
-ws.onmessage = (event: MessageEvent<string>) => {
+function onMessage(event: MessageEvent<string>): void {
   const msg = parseMessage(event.data);
   if (!msg) return;
   for (const h of msg.hosts) getOrCreateHost(h.id, h.local);
@@ -84,7 +79,24 @@ ws.onmessage = (event: MessageEvent<string>) => {
       if (host) host.targetHeight = Math.min(60, host.targetHeight + grow);
     }
   }
-};
+}
+
+// Same origin as the page: the Go binary serves both (docs/DECISIONS.md D3).
+// The session cookie from /auth is required before the socket will open.
+async function connect(): Promise<void> {
+  const session = await checkSession();
+  if (session === "invalid") {
+    setStatus(INVALID_LINK_MESSAGE);
+    return;
+  }
+  const wsUrl = new URL("/ws", window.location.href);
+  wsUrl.protocol = wsUrl.protocol === "https:" ? "wss:" : "ws:";
+  const ws = new WebSocket(wsUrl);
+  ws.onopen = () => setStatus("WS: Connected Live");
+  ws.onclose = () => setStatus("WS: Disconnected");
+  ws.onmessage = onMessage;
+}
+void connect();
 
 function animate(): void {
   requestAnimationFrame(animate);

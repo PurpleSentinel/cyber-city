@@ -89,10 +89,14 @@ func (h *Hub) ServeWS(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Handler routes /ws to the hub and everything else to the static frontend.
-func Handler(h *Hub, static fs.FS) http.Handler {
+// Handler routes the endpoints of docs/PROTOCOL.md: /auth exchanges the token
+// for a session, /api/session and /ws require it, and everything else is the
+// static frontend (which holds no data).
+func Handler(h *Hub, static fs.FS, auth *Auth) http.Handler {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/ws", h.ServeWS)
+	mux.HandleFunc("GET /auth", auth.HandleAuth)
+	mux.HandleFunc("GET /api/session", auth.HandleSession)
+	mux.Handle("/ws", auth.Require(http.HandlerFunc(h.ServeWS)))
 	mux.Handle("/", http.FileServerFS(static))
 	return mux
 }
