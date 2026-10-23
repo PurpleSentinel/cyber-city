@@ -53,3 +53,22 @@ func TestAggregatorGroupsByFlowAndResets(t *testing.T) {
 		t.Fatalf("after flush: %d flows, want 0", n)
 	}
 }
+
+func TestAggregatorCountsWireLength(t *testing.T) {
+	p := tcpPacket(t, "10.0.1.10", "203.0.113.10", 443, false)
+	p.Metadata().CaptureLength = 128
+	p.Metadata().Length = 1514 // truncated by snaplen; the wire size counts
+	a := NewAggregator()
+	a.Add(p)
+	if got := a.Flush()[0].ByteCount; got != 1514 {
+		t.Fatalf("bytes = %d, want 1514", got)
+	}
+}
+
+func TestAggregatorIgnoresNonIPv4(t *testing.T) {
+	a := NewAggregator()
+	a.Add(gopacket.NewPacket([]byte{1, 2, 3}, layers.LayerTypeEthernet, gopacket.Default))
+	if n := len(a.Flush()); n != 0 {
+		t.Fatalf("after flush: %d flows, want 0", n)
+	}
+}

@@ -73,7 +73,7 @@ func (a *Aggregator) Add(packet gopacket.Packet) {
 	case *layers.UDP:
 		port, protocol = int(t.DstPort), "UDP"
 	}
-	bytes := len(packet.Data())
+	bytes := wireLength(packet)
 
 	key := fmt.Sprintf("%s->%s:%d", srcIP, dstIP, port)
 	a.mu.Lock()
@@ -109,6 +109,15 @@ func (a *Aggregator) Flush() []*PacketMetrics {
 	}
 	a.metrics = make(map[string]*PacketMetrics)
 	return out
+}
+
+// wireLength is the packet's on-wire size, not the captured (snaplen-truncated)
+// size (docs/DECISIONS.md D8). Packets built in memory have no capture info.
+func wireLength(packet gopacket.Packet) int {
+	if md := packet.Metadata(); md != nil && md.Length > 0 {
+		return md.Length
+	}
+	return len(packet.Data())
 }
 
 func isLocal(ip string) bool {
