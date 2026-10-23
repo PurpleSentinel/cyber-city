@@ -331,7 +331,7 @@ Split into two PRs (AGENTS.md size rule):
 
 ## Milestone 4: Events
 
-### [ ] T4.1 Detector framework
+### [x] T4.1 Detector framework
 - **Depends:** T2.5. **Touches:** `internal/detect`.
 - **Do:** a `Detector` interface fed per packet record and per window, event ids, cooldowns, max-64 targets, ordering.
 - **Done when:** unit tests cover cooldown suppression and id sequencing.

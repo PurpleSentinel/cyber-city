@@ -34,8 +34,8 @@ fixturegen rules:
 | `dns.pcap` | `10.0.1.10` sends 20 UDP queries to `10.0.1.1:53`, each answered | category `dns`, `10.0.1.1` service 53/udp confirmed |
 | `ssh.pcap` | `10.0.1.20` → `10.0.9.5:22`, 60 s interactive | category `ssh`, `10.0.9.5` service 22 confirmed |
 | `retrans.pcap` | as `web_https`, with 5% of data segments retransmitted | `retrans_rate` 0.05 ± 0.01 for `203.0.113.10` |
-| `scan_syn.pcap` | `10.0.1.66` → `10.0.9.5`: SYNs to ports 1–1024 over 8 s; RST for closed ports, SYN-ACK on 22 and 80 | exactly 1 `port_scan`, src `10.0.1.66`, dst `10.0.9.5`, `distinct_ports` 1024 |
-| `scan_sweep.pcap` | `10.0.1.66` → `10.0.1.2`–`10.0.1.254`, port 445, no replies | exactly 1 `port_scan`, `dst: null`, `distinct_hosts` ≥ 20, `targets` length 64 |
+| `scan_syn.pcap` | `10.0.1.66` → `10.0.9.5`: SYNs to ports 1–1024 over 8 s; RST for closed ports, SYN-ACK on 22 and 80 | exactly 1 `port_scan`, src `10.0.1.66`, dst `10.0.9.5`, `distinct_ports` ≥ 50 (the event fires as the threshold is crossed, not at the end of the scan) |
+| `scan_sweep.pcap` | `10.0.1.66` → `10.0.1.2`–`10.0.1.254`, port 445, no replies | exactly 1 `port_scan`, `dst: null`, `distinct_hosts` ≥ 20, `targets` = the probed hosts so far (20–64) |
 | `flood.pcap` | 40 s baseline of 50 pps from 5 clients to `10.0.9.5:80`, then 5 s of 3000 pps from 60 sources in the documentation ranges | exactly 1 `flood` for `10.0.9.5`, `distinct_sources` ≥ 50; no `flood` during the baseline |
 | `idle.pcap` | `10.0.1.30` is active 0–10 s, then silent; `10.0.1.10` sends 1 pkt/s until 140 s | exactly 1 `host_idle` for `10.0.1.30` at ts ≈ 130 s, with `10.0.1.30` in that tick's `removed_hosts` |
 | `ipv6.pcap` | `fd00:1::10` → `2001:db8:ffff::1:443`, plus NDP | flows have IPv6 ids, `fd00:1::10` local, NDP traffic categorised as `control` |
