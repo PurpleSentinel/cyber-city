@@ -42,7 +42,7 @@ make build     # builds the frontend and embeds it in bin/cybercity
 bin/cybercity --read testdata/pcap/demo.pcap --loop
 ```
 
-Open the URL it prints (`http://127.0.0.1:8080/auth?token=…`). The one-time token logs your browser in and is removed from the address bar.
+Open the URL it prints (`http://127.0.0.1:8080/auth?token=…`). The token in it logs your browser in and is removed from the address bar; it stays valid until the process stops. [docs/SETUP.md](docs/SETUP.md) is the full setup guide: live capture, configuration, GPU, remote viewing and troubleshooting.
 
 `bin/cybercity --read testdata/pcap/demo.pcap --dump-json -` prints the protocol messages instead of serving the page.
 

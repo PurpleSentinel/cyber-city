@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: MIT
-# CI check (docs/TASKS.md T5.3): the README's live quick start,
-# `make setcap && bin/cybercity`, captures as an unprivileged user.
+# CI check (docs/TASKS.md T5.3, T5.5): the live quick start from the README
+# and docs/SETUP.md captures as an unprivileged user after `make setcap`.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 dir=$(mktemp -d)
@@ -18,4 +18,15 @@ if ! kill -0 "$pid" 2>/dev/null || [ ! -s "$dir/url" ]; then
 fi
 [ "$(stat -c %u "/proc/$pid")" = "$(id -u)" ] || { echo "FAIL: not running as the invoking user"; exit 1; }
 grep -i "capture" "$dir/log" | head -3 || true
+kill "$pid"
+wait "$pid" 2>/dev/null || true
+
+# docs/SETUP.md "Choosing what to capture".
+bin/cybercity --list-ifaces | grep -q '^ *lo ' || { echo "FAIL: lo not listed"; exit 1; }
+rm -f "$dir/url"
+bin/cybercity --iface lo --bpf "tcp or udp" --no-promisc --listen 127.0.0.1:0 --url-file "$dir/url" >"$dir/log2" 2>&1 &
+pid=$!
+for _ in $(seq 100); do [ -s "$dir/url" ] && break; sleep 0.1; done
+sleep 1
+kill -0 "$pid" 2>/dev/null && [ -s "$dir/url" ] || { echo "FAIL: filtered capture on lo"; cat "$dir/log2"; exit 1; }
 echo "live quick start OK (uid $(id -u))"

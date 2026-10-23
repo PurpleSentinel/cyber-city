@@ -398,6 +398,11 @@ The owner picks a licence (MIT or Apache-2.0 suggested). An agent then adds `LIC
 - **Do:** the pipeline sustains ≥ 200k packets/s in replay with `-race` off; e2e records frame time at 2000 hosts (a synthetic many-hosts fixture).
 - **Done when:** the numbers are reported in the PR, and regressions of more than 20% against the stored baseline fail a non-blocking CI job.
 
+### [x] T5.5 Setup and quick-start guide
+- **Depends:** T5.3. **Touches:** `docs/SETUP.md`, `tools/ci/`. Issue #63.
+- **Do:** a step-by-step guide from a clean machine to the demo and to live capture: prerequisites, build, permissions, interface choice and SPAN/TAP, configuration (districts, GeoIP), browser and GPU, remote viewing over SSH, privacy flags, troubleshooting, cleanup.
+- **Done when:** every runnable command in the guide is exercised by CI (`tools/ci/readme-smoke.sh`, `tools/ci/live-quickstart.sh`) and the rest are marked as examples.
+
 ---
 
 ## Later (not scheduled)
