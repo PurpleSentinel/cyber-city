@@ -361,7 +361,7 @@ Split into two PRs (AGENTS.md size rule):
 - **Do:** as V.
 - **Done when:** Vitest checks the sky colour timeline at t = 0, 1, 5, 8 s.
 
-### [ ] T4.7 Power-outage effect
+### [x] T4.7 Power-outage effect
 - **Depends:** T3.5, T4.4. **Touches:** `web/src/render/effects/outage.ts`.
 - **Do:** as V; free the instance afterwards.
 - **Done when:** Vitest checks the dissolve timeline and that the instance returns to the free list.
