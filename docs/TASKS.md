@@ -204,7 +204,7 @@ Split into two PRs (AGENTS.md size rule):
 - **Do:** add services from flows where this host is the server side; set `confirmed` per P; cap at `max_services`.
 - **Done when:** the `web_https`, `dns` and `ssh` service assertions in T pass.
 
-### [ ] T2.7 Handshake RTT
+### [x] T2.7 Handshake RTT
 - **Depends:** T2.4. **Touches:** `internal/enrich/rtt.go`.
 - **Do:** the RTT algorithm in C; flow `rtt_ms`; host median over `rtt_samples`; pending-SYN expiry.
 - **Done when:** `web_https` has `rtt_ms` 12.0 ± 0.5, and a unit test shows a retransmitted SYN gives no sample.
