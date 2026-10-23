@@ -199,7 +199,7 @@ Split into two PRs (AGENTS.md size rule):
   - Snapshot for `hello`.
 - **Done when:** unit tests for change detection and eviction pass, and the `idle` fixture has `10.0.1.30` in `removed_hosts` at ≈ 130 s (the event comes in T4.4).
 
-### [ ] T2.6 Services
+### [x] T2.6 Services
 - **Depends:** T2.5. **Touches:** `internal/enrich/services.go`.
 - **Do:** add services from flows where this host is the server side; set `confirmed` per P; cap at `max_services`.
 - **Done when:** the `web_https`, `dns` and `ssh` service assertions in T pass.

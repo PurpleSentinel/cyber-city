@@ -29,6 +29,7 @@ func testOptions() Options {
 		MaxTracked:  50000,
 		MaxHosts:    2000,
 		IdleTimeout: 120 * time.Second,
+		MaxServices: 16,
 		Server:      protocol.ServerInfo{Version: "test", Source: "file"},
 	}
 }

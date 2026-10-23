@@ -23,10 +23,12 @@ type hostState struct {
 	dirty     bool      // new or changed since the last tick
 }
 
-func (h *hostState) wire(id *identity) protocol.Host {
+// wire builds the protocol view of a host; callers hold p.mu.
+func (p *Pipeline) wire(h *hostState) protocol.Host {
 	return protocol.Host{
-		ID:          id.hostID(h.addr),
-		IP:          id.hostIP(h.addr),
+		ID:          p.id.hostID(h.addr),
+		IP:          p.id.hostIP(h.addr),
+		Services:    p.svc.For(h.addr),
 		Local:       h.local,
 		District:    h.district,
 		DeviceClass: protocol.ClassUnknown,

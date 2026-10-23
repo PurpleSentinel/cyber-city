@@ -93,6 +93,7 @@ func run(ctx context.Context, cfg config.Config) error {
 		MaxTracked:  cfg.Flows.MaxTracked,
 		MaxHosts:    cfg.MaxHosts,
 		IdleTimeout: cfg.Hosts.IdleTimeout.D(),
+		MaxServices: cfg.Hosts.MaxServices,
 		Server:      info,
 		Anonymize:   cfg.Anonymize,
 	})
