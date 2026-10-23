@@ -28,7 +28,7 @@ Full version: [docs/DESIGN.md](docs/DESIGN.md#threat-model-summary).
 | Risk | Defence |
 |---|---|
 | Remote access | Binds `127.0.0.1` by default; any non-loopback bind logs a warning. |
-| Cross-site pages | A one-time token in the printed URL is exchanged for an `HttpOnly`, `SameSite=Strict` session cookie; `/ws` and `/api/*` require it. WebSocket upgrades also need an allowed `Origin`. |
+| Cross-site pages | A per-run token in the printed URL is exchanged for an `HttpOnly`, `SameSite=Strict` session cookie; `/ws` and `/api/*` require it. WebSocket upgrades also need an allowed `Origin`. |
 | Injected content | Strict Content-Security-Policy, `nosniff`, `no-referrer`; no inline scripts or styles. |
 | Privilege | Use `setcap` to grant only capture capabilities, or start as root and the process drops to `nobody` (or `--user`) once the capture and listener are open. |
 | Slow or abusive clients | Per-client queues and write deadlines, a 512-byte read limit, ping/pong liveness, a client cap. |

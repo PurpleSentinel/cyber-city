@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: MIT
-# CI check (docs/TASKS.md T5.3): runs the README's no-root commands against a
-# built bin/cybercity. `make setup` and `make build` run in the e2e job before
+# CI check (docs/TASKS.md T5.3, T5.5): runs the no-root commands from the
+# README and docs/SETUP.md against a built bin/cybercity. `make setup` and `make build` run in the e2e job before
 # this; the live quick start runs in the live-smoke job (live-quickstart.sh).
 set -euo pipefail
 cd "$(dirname "$0")/../.."
@@ -28,4 +28,20 @@ echo "== bin/cybercity --list-ifaces"
 "$bin" --list-ifaces >"$dir/ifaces"
 head -5 "$dir/ifaces"
 
-echo "README commands OK"
+echo "== bin/cybercity --version"
+"$bin" --version
+
+echo "== bin/cybercity --config cybercity.yaml (copied from the example)"
+cp config/cybercity.example.yaml "$dir/cybercity.yaml"
+"$bin" --config "$dir/cybercity.yaml" --read testdata/pcap/demo.pcap --dump-json - >/dev/null
+
+echo "== bin/cybercity --districts config/districts.example.yaml --read testdata/pcap/vlan.pcap"
+"$bin" --districts config/districts.example.yaml --read testdata/pcap/vlan.pcap --dump-json - >"$dir/vlan.jsonl"
+grep -q '"name":"Server Core"' "$dir/vlan.jsonl" || { echo "FAIL: named district missing"; exit 1; }
+
+echo "== bin/cybercity --anonymize --read testdata/pcap/demo.pcap --dump-json -"
+"$bin" --anonymize --read testdata/pcap/demo.pcap --dump-json - >"$dir/anon.jsonl"
+if grep -Eq '"ip":"|10\.0\.[0-9]+\.[0-9]+' "$dir/anon.jsonl"; then echo "FAIL: address in anonymized output"; exit 1; fi
+grep -q '"id":"anon-' "$dir/anon.jsonl" || { echo "FAIL: no pseudonyms"; exit 1; }
+
+echo "README and SETUP commands OK"

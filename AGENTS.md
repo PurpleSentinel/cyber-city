@@ -7,6 +7,7 @@ Instructions for coding agents (and humans) working on CyberCity-3D: a Go servic
 2. The spec sections that task cites: `docs/PROTOCOL.md`, `docs/CONFIG.md`, `docs/VISUAL_SPEC.md`, `docs/TESTING.md`.
 3. `docs/DECISIONS.md`: settled choices; do not re-open them.
 4. `docs/DESIGN.md` for intent, `ROADMAP.md` for the big picture.
+5. `docs/SETUP.md` to set up a machine and run the app.
 
 The specs are normative. If code and spec disagree, fix the code, or change the spec in the same PR with a reason.
 
