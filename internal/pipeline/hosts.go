@@ -29,7 +29,18 @@ func (p *Pipeline) wire(h *hostState) protocol.Host {
 	if med, ok := p.rtt.HostMedian(h.addr); ok {
 		rtt = protocol.Ptr(protocol.Round1(med))
 	}
+	var mac, vendor *string
+	if m, v, ok := p.macs.For(h.addr); ok && h.local {
+		if p.opts.Server.ShowMAC {
+			mac = protocol.Ptr(m)
+		}
+		if v != "" {
+			vendor = protocol.Ptr(v)
+		}
+	}
 	return protocol.Host{
+		MAC:         mac,
+		Vendor:      vendor,
 		RTTMS:       rtt,
 		RetransRate: protocol.Round3(p.retx.Rate(h.addr, h.lastSeen)),
 		ID:          p.id.hostID(h.addr),
