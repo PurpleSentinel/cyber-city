@@ -7,6 +7,7 @@ import (
 
 	"github.com/gopacket/gopacket"
 
+	"github.com/PurpleSentinel/cyber-city/internal/detect"
 	"github.com/PurpleSentinel/cyber-city/internal/districts"
 	"github.com/PurpleSentinel/cyber-city/internal/enrich"
 	"github.com/PurpleSentinel/cyber-city/internal/protocol"
@@ -36,6 +37,10 @@ type Options struct {
 	Districts *districts.Matcher
 	// Geo places external hosts in compass sectors (nil: --geoip not set).
 	Geo *enrich.Geo
+	// Detectors produce heuristic events (nil: none).
+	Detectors []detect.Detector
+	// Cooldowns per event kind (detect.scan.cooldown, detect.flood.cooldown).
+	Cooldowns map[string]time.Duration
 	// Server describes the sensor in hello messages.
 	Server protocol.ServerInfo
 	// Anonymize pseudonymises host ids and hides addresses (--anonymize).
@@ -62,13 +67,15 @@ type flowAgg struct {
 // Pipeline aggregates packet records into protocol ticks. Add and Advance
 // must be called from one goroutine; Snapshot may be called concurrently.
 type Pipeline struct {
-	opts Options
-	id   *identity
-	svc  *enrich.Services
-	rtt  *enrich.RTT
-	retx *enrich.Retrans
-	macs *enrich.MACs
-	cls  *enrich.Classifier
+	opts   Options
+	id     *identity
+	svc    *enrich.Services
+	rtt    *enrich.RTT
+	retx   *enrich.Retrans
+	macs   *enrich.MACs
+	cls    *enrich.Classifier
+	det    *detect.Manager
+	events []protocol.Event // events since the last tick
 	// lastClassify is the packet time of the last device-class pass.
 	lastClassify time.Time
 	flowRTT      map[flowKey]float64 // most recent handshake RTT per flow key
@@ -103,6 +110,7 @@ func New(opts Options) *Pipeline {
 		retx:      enrich.NewRetrans(opts.RetransWindow, max(1, opts.MaxTracked)),
 		macs:      enrich.NewMACs(max(1, opts.GatewayMinIPs), max(1, opts.MaxHosts)),
 		cls:       enrich.NewClassifier(),
+		det:       detect.NewManager(opts.Cooldowns, opts.Detectors...),
 		dec:       NewDecoder(),
 		tracker:   NewServerTracker(opts.MaxTracked),
 		flows:     make(map[flowKey]*flowAgg),
@@ -179,6 +187,12 @@ func (p *Pipeline) add(r *Record) {
 		port := *d.ServicePort
 		p.cls.Connection(d.Src, d.Dst, port, Category(r.Proto, &port), IsLocal(d.Dst), r.TS)
 	}
+	p.det.Packet(&detect.Packet{
+		TS: r.TS, Src: r.Src, Dst: r.Dst,
+		TCP: r.Proto == ProtoTCP, UDP: r.Proto == ProtoUDP,
+		SrcPort: r.SrcPort, DstPort: r.DstPort,
+		SYN: r.Flags&FlagSYN != 0, ACK: r.Flags&FlagACK != 0, RST: r.Flags&FlagRST != 0,
+	})
 	p.observeService(r, &d)
 	p.observeHandshake(r, &d, key)
 	if r.Proto == ProtoTCP && r.PayloadLen > 0 {
@@ -358,6 +372,8 @@ func (p *Pipeline) tick(end time.Time) *protocol.Tick {
 		p.classify(end)
 	}
 	t.RemovedHosts, p.removed = p.removed, nil
+	t.Events = append(p.events, p.det.Window(end, p.id.hostID)...)
+	p.events = nil
 	for _, h := range p.hosts {
 		if h.dirty {
 			t.Hosts = append(t.Hosts, p.wire(h))
