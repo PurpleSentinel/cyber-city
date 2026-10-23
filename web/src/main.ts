@@ -11,6 +11,7 @@ import type { Host } from "./protocol";
 import { Buildings } from "./render/buildings";
 import { Lightning } from "./render/effects/lightning";
 import { Highways } from "./render/highways";
+import { Particles } from "./render/particles";
 import { poseFor, probe } from "./render/probe";
 import { rendererInfo } from "./render/rendererInfo";
 import { Plots, addLights, configureRenderer, createGround, setEnvironment } from "./render/scene";
@@ -59,6 +60,8 @@ scene.add(lightning.group);
 const highwayModel = new HighwayModel();
 const highways = new Highways();
 scene.add(highways.mesh);
+const particles = new Particles(quality === "low");
+scene.add(particles.mesh);
 
 function endpoint(id: string) {
   const g = buildings.geometry(id);
@@ -83,6 +86,7 @@ store.subscribe({
   reset() {
     buildings.clear();
     highwayModel.clear();
+    particles.clear();
     layout.reset();
     plots.update([]);
     firstTickTs = 0;
@@ -97,7 +101,9 @@ store.subscribe({
     if (firstTickTs === 0) firstTickTs = t.ts;
     lastTickTs = t.ts;
     highwayModel.applyTick(t.flows, t.window_ms, t.ts, (id) => buildings.has(id));
-    highways.update(highwayModel.roads(t.ts), endpoint);
+    const roads = highwayModel.roads(t.ts);
+    highways.update(roads, endpoint);
+    particles.setRoads(roads, endpoint);
     for (const id of buildings.applyBytes(bytesByHost(t.flows), t.window_ms, t.ts)) {
       const g = buildings.geometry(id);
       if (g) lightning.strike(g.x, g.z, g.base + g.height);
@@ -173,7 +179,7 @@ const debug = debugEnabled()
       stats: () => ({
         buildings: buildings.size,
         highways: highways.roadCount,
-        particles: 0,
+        particles: particles.system.live.length,
         ticks: store.ticks,
         events: store.events.length,
         renderer: gpu.name,
@@ -212,6 +218,7 @@ function animate(now?: number): void {
   const dt = Math.min(timer.getDelta(), 0.1);
   buildings.frame(dt, timer.getElapsed());
   lightning.frame(dt);
+  particles.frame(dt);
   applyPose();
   controls.update();
   renderer.render(scene, camera);

@@ -5,29 +5,11 @@ import { CATEGORY_COLORS, HIGHWAYS, MATERIALS } from "../config";
 import type { Point } from "../layout/layout";
 import type { Road } from "../state/highways";
 import { route } from "../state/highways";
+import { glowAttributes, glowMaterial } from "./glow";
 
 /** Roads float 0.1 above the plot tops (VISUAL_SPEC "Highways"). */
 export const ROAD_Y = MATERIALS.plot.height + HIGHWAYS.y;
 
-const VERTEX = /* glsl */ `
-attribute vec3 iColor;
-attribute float iAlpha;
-varying vec3 vColor;
-varying float vAlpha;
-void main() {
-  vColor = iColor;
-  vAlpha = iAlpha;
-  gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0);
-}`;
-
-const FRAGMENT = /* glsl */ `
-varying vec3 vColor;
-varying float vAlpha;
-void main() {
-  gl_FragColor = vec4(vColor * vAlpha, vAlpha);
-  #include <tonemapping_fragment>
-  #include <colorspace_fragment>
-}`;
 
 export interface EndPoint {
   point: Point;
@@ -45,19 +27,8 @@ export class Highways {
   constructor(capacity = HIGHWAYS.max * 2) {
     const geo = new THREE.PlaneGeometry(1, 1);
     geo.rotateX(-Math.PI / 2); // lie flat in XZ
-    this.color = new THREE.InstancedBufferAttribute(new Float32Array(capacity * 3), 3);
-    this.alpha = new THREE.InstancedBufferAttribute(new Float32Array(capacity), 1);
-    geo.setAttribute("iColor", this.color);
-    geo.setAttribute("iAlpha", this.alpha);
-    const mat = new THREE.ShaderMaterial({
-      vertexShader: VERTEX,
-      fragmentShader: FRAGMENT,
-      transparent: true,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-      toneMapped: true,
-    });
-    this.mesh = new THREE.InstancedMesh(geo, mat, capacity);
+    ({ color: this.color, alpha: this.alpha } = glowAttributes(geo, capacity));
+    this.mesh = new THREE.InstancedMesh(geo, glowMaterial(), capacity);
     this.mesh.count = 0;
     this.mesh.frustumCulled = false;
     this.mesh.name = "highways";

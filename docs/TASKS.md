@@ -302,7 +302,7 @@ Split into two PRs (AGENTS.md size rule):
 - **Do:** pair aggregation, routing, width, dominant colour, fade, the 500 cap (V).
 - **Done when:** Vitest covers the L-route geometry, width formula, cap selection and fade timing.
 
-### [ ] T3.8 Particle freight
+### [x] T3.8 Particle freight
 - **Depends:** T3.7. **Touches:** `web/src/render/particles.ts`.
 - **Do:** the pool, emission rate, RTT-based travel time, direction (V).
 - **Done when:** Vitest covers the emission and travel-time formulas and the pool cap (never more than 5000 live).
