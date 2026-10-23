@@ -4,6 +4,7 @@ package enrich
 import (
 	"net"
 	"sort"
+	"strings"
 )
 
 //go:generate go run ../../tools/ouigen -out oui_table.go
@@ -20,4 +21,15 @@ func Lookup(mac net.HardwareAddr) (string, bool) {
 		return "", false
 	}
 	return ouiVendorNames[ouiVendorIndex[i]], true
+}
+
+// FindPrefix returns the lowest registered OUI whose vendor name contains
+// substr (case-sensitive). Used by tools/fixturegen to pick realistic MACs.
+func FindPrefix(substr string) (net.HardwareAddr, bool) {
+	for i, p := range ouiPrefixes {
+		if strings.Contains(ouiVendorNames[ouiVendorIndex[i]], substr) {
+			return net.HardwareAddr{byte(p >> 16 & 0xff), byte(p >> 8 & 0xff), byte(p & 0xff)}, true //nolint:gosec // masked to 8 bits
+		}
+	}
+	return nil, false
 }

@@ -75,7 +75,7 @@ Spec abbreviations: **P** = PROTOCOL.md, **C** = CONFIG.md, **V** = VISUAL_SPEC.
   - Tests pass: `b8:27:eb:..` → contains "Raspberry Pi", `00:00:0c:..` → contains "Cisco", `02:00:00:..` → not found.
   - The generated file is < 3 MB.
 
-### [ ] T0.7 Fixture generator
+### [x] T0.7 Fixture generator
 - **Depends:** T0.6. **Touches:** `tools/fixturegen`, `testdata/pcap`, `testdata/geo`.
 - **Do:** generate every fixture in T: *Fixtures* with `gopacket.SerializeLayers` and `pcapgo.NewWriter`, plus `test-city.mmdb` via `mmdbwriter`. Follow the determinism rules. `make fixtures` runs it.
 - **Done when:**
