@@ -6,6 +6,7 @@
 /web/dist/*
 !/web/dist/.gitkeep
 /web/e2e/artifacts/
+/web/e2e/.state/
 /web/test-results/
 /web/playwright-report/
 

@@ -39,6 +39,8 @@ type File struct {
 	first  time.Time
 	last   time.Time
 	filter *pcap.BPF
+	// restarted is set when the file rewinds; Restarted reports and clears it.
+	restarted bool
 }
 
 // OpenFile opens a pcap capture file with an Ethernet link type.
@@ -92,6 +94,7 @@ func (s *File) Next() ([]byte, gopacket.CaptureInfo, error) {
 			}
 			s.offset += s.last.Sub(s.first) + loopGap
 			s.first = time.Time{}
+			s.restarted = true
 			continue
 		}
 		if err != nil {
@@ -117,6 +120,14 @@ func (s *File) SetFilter(expr string) error {
 	}
 	s.filter = bpf
 	return nil
+}
+
+// Restarted reports, once, that the file looped back to its start: the same
+// connections and sequence numbers will replay.
+func (s *File) Restarted() bool {
+	r := s.restarted
+	s.restarted = false
+	return r
 }
 
 // Live is false: file timestamps are replayed, not observed.

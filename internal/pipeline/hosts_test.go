@@ -1,11 +1,19 @@
 package pipeline
 
 import (
+	"bytes"
+	"context"
+	"io"
 	"net/netip"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/gopacket/gopacket"
+
+	"github.com/PurpleSentinel/cyber-city/internal/capture"
 
 	"github.com/PurpleSentinel/cyber-city/internal/enrich"
 	"github.com/PurpleSentinel/cyber-city/internal/protocol"
@@ -207,6 +215,57 @@ func TestDeviceClassesInDemo(t *testing.T) {
 		if got := hosts[id].DeviceClass; got != want {
 			t.Errorf("%s class %s, want %s", id, got, want)
 		}
+	}
+}
+
+// limitedSource stops a looping file after n frames.
+type limitedSource struct {
+	*capture.File
+	n int
+}
+
+func (l *limitedSource) Next() ([]byte, gopacket.CaptureInfo, error) {
+	if l.n == 0 {
+		return nil, gopacket.CaptureInfo{}, io.EOF
+	}
+	l.n--
+	return l.File.Next()
+}
+
+// A looped replay repeats the same connections and sequence numbers; they must
+// not be counted as retransmissions (found by the e2e shading test).
+func TestLoopedReplayIsNotRetransmission(t *testing.T) {
+	f, err := capture.OpenFile(filepath.Join("..", "..", "testdata", "pcap", "web_https.pcap"), true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = f.Close() }()
+	p := New(testOptions())
+	var buf bytes.Buffer
+	sink, err := NewJSONLSink(&buf, p.Snapshot())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := Run(context.Background(), &limitedSource{File: f, n: 234 * 2}, p, sink, 0); err != nil {
+		t.Fatal(err)
+	}
+	_ = sink.Close()
+	ts := ticks(t, buf.Bytes())
+	for id, h := range lastHosts(ts) {
+		if h.RetransRate != 0 {
+			t.Fatalf("host %s retrans_rate %v after a looped replay, want 0", id, h.RetransRate)
+		}
+	}
+	var rtts int
+	for _, tk := range ts {
+		for _, fl := range tk.Flows {
+			if fl.RTTMS != nil {
+				rtts++
+			}
+		}
+	}
+	if rtts < 2 {
+		t.Fatalf("handshake RTT measured in %d ticks, want both passes", rtts)
 	}
 }
 

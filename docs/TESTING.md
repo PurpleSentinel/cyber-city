@@ -95,8 +95,8 @@ Conformance: Go writes canonical example messages to `testdata/protocol/{hello,t
    4. Assert:
       - `stats().wireframe === false`, `stats().lit === true`, `stats().shadows === true`.
       - **Filled:** in each face polygon, ≥ 90% of pixels differ from `bg` by relative luminance > 0.02. A wireframe or edges-only body scores far below this.
-      - **Lit:** the mean luminance of the `px` face (moon-lit) exceeds the `pz` face (sky-lit) by ≥ 8% of the `px` mean.
-      - **Shadowed:** a 20×20 px patch centred on `probe(id).shadow` has mean luminance ≥ 5% lower than one centred on `probe(id).lit`. `pose=auto` guarantees the host is local, ≥ 10 tall and has `sameSurface === true`. Both points were checked geometrically to be visible from the pose, with only the shadow point in shadow, for heights 10–40.
+      - **Lit:** the facade body of the `px` face (moon-lit) is brighter than the `pz` face (sky-lit) by ≥ 8%, measured at the 30th luminance percentile of each face. This excludes the emissive windows, which are identical on both faces and would dominate a mean.
+      - **Shadowed:** around the building (`probe(id).ring`, 5×5 px samples, face pixels excluded), the darkest ground in the sector away from the moon (112°–202°) is ≥ 5% darker than the median of the moon-facing, camera-visible ground (300°–90°). The cast shadow is a narrow wedge, which a single fixed sample point tends to miss. The page is opened with `hide=traffic`, so highways and particles do not cover the ground. `pose=auto` guarantees the host is local, ≥ 10 tall and has `sameSurface === true`. Both points were checked geometrically to be visible from the pose, with only the shadow point in shadow, for heights 10–40.
    5. Save the crop as `web/e2e/artifacts/shading.png`.
 6. Save a screenshot to `web/e2e/artifacts/city.png`, uploaded as a CI artifact. This is how a reviewer, human or agent, sees the city.
 7. Negative test: opening `/` without auth shows `Invalid link`.
