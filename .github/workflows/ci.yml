@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GOLANGCI_LINT_VERSION: v2.15.0
+
+jobs:
+  go:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install libpcap headers
+        run: sudo apt-get update -q && sudo apt-get install -yq libpcap-dev
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - name: Install tools
+        run: |
+          go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@${GOLANGCI_LINT_VERSION}
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+      - name: go vet
+        run: go vet ./...
+      - name: golangci-lint
+        run: golangci-lint run ./...
+      - name: go test
+        run: go test -race ./...
+      - name: govulncheck
+        run: govulncheck ./...
+      - name: Fixtures are reproducible
+        run: make fixtures-check
+
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: ESLint
+        run: npm run lint
+      - name: Vitest
+        run: npm run test
+      - name: Build
+        run: npm run build
+
+  # Enabled by T3.12 (docs/TESTING.md "End-to-end").
+  e2e:
+    if: ${{ false }}
+    needs: [go, web]
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "enabled in T3.12"
+
+  # Enabled by T1.8 (docs/TESTING.md "Layers": live-capture smoke test).
+  live-smoke:
+    if: ${{ false }}
+    needs: [go]
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "enabled in T1.8"

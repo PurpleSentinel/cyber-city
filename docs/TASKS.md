@@ -43,7 +43,7 @@ Spec abbreviations: **P** = PROTOCOL.md, **C** = CONFIG.md, **V** = VISUAL_SPEC.
   - `go vet ./...`, `tsc --noEmit` and `vitest run` (one placeholder test) pass.
   - README "Getting started" is updated to `make build` and `sudo bin/cybercity`. The old security warning stays until M1.
 
-### [ ] T0.3 Continuous integration
+### [x] T0.3 Continuous integration
 - **Depends:** T0.2. **Touches:** `.github/workflows/ci.yml`, `.github/dependabot.yml`.
 - **Do:** create the `go` and `web` jobs from T: CI. Leave `e2e` and `live-smoke` as jobs that are skipped until T3.12 and T1.8. Configure Dependabot for gomod, npm (`/web`) and github-actions, weekly.
 - **Done when:** CI runs green on the PR. 👤 Owner enables branch protection requiring CI on `main`.
