@@ -40,6 +40,28 @@ func TestScanSweepFixture(t *testing.T) {
 	}
 }
 
+func TestFloodFixture(t *testing.T) {
+	ts := ticks(t, runFixture(t, "flood", testOptions()))
+	evs := eventsOf(ts, protocol.EventFlood)
+	if len(evs) != 1 {
+		t.Fatalf("flood events = %d, want 1: %+v", len(evs), evs)
+	}
+	e := evs[0]
+	start := ts[0].TS + 40_000
+	if e.Dst == nil || *e.Dst != "10.0.9.5" || e.Src != nil || e.Evidence["distinct_sources"] < 50 || e.TS < start || e.TS > start+5_000 {
+		t.Fatalf("flood event %+v (flood starts at %d)", e, start)
+	}
+}
+
+// Fixtures without a flood must not report one.
+func TestNoFloodElsewhere(t *testing.T) {
+	for _, name := range []string{"web_https", "dns", "ssh", "retrans", "scan_syn", "scan_sweep", "idle", "ipv6", "vlan", "gateway", "demo"} {
+		if evs := eventsOf(ticks(t, runFixture(t, name, fixtureOptions(t, name))), protocol.EventFlood); len(evs) != 0 {
+			t.Errorf("%s: unexpected flood %+v", name, evs)
+		}
+	}
+}
+
 // Benign fixtures must not look like scans.
 func TestNoScanInBenignFixtures(t *testing.T) {
 	for _, name := range []string{"web_https", "dns", "ssh", "retrans", "flood", "idle", "ipv6", "vlan", "gateway"} {
