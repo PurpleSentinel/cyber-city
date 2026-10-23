@@ -118,3 +118,36 @@ jobs:
         run: |
           go build -o bin/cybercity ./cmd/cybercity
           tools/ci/privdrop-smoke.sh bin/cybercity
+
+  # docs/TASKS.md T5.2: the release config builds, archives and checksums a
+  # snapshot. arm64 builds natively in release.yml (cgo + libpcap), so here
+  # the amd64 build runs and the arm64 one is skipped.
+  release-dry-run:
+    needs: [go]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Install libpcap headers
+        run: sudo apt-get update -q && sudo apt-get install -yq libpcap-dev
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+        working-directory: web
+      - uses: anchore/sbom-action/download-syft@v0
+        with:
+          syft-version: v1.54.1
+      - uses: goreleaser/goreleaser-action@v7
+        with:
+          distribution: goreleaser
+          version: v2.18.3
+          args: release --snapshot --clean
+      - name: Snapshot contents
+        run: ls -l dist/ && tar tzf dist/cybercity_*_linux_amd64.tar.gz && grep -c . dist/checksums_amd64.txt

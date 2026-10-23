@@ -378,7 +378,7 @@ Split into two PRs (AGENTS.md size rule):
 ### [ ] T5.1 👤 Licence
 The owner picks a licence (MIT or Apache-2.0 suggested). An agent then adds `LICENSE` and SPDX headers to source files.
 
-### [ ] T5.2 Release pipeline
+### [x] T5.2 Release pipeline
 - **Depends:** T1.8. **Touches:** `.goreleaser.yaml`, `.github/workflows/release.yml`.
 - **Do:** on tag `v*`, build Linux amd64 and arm64 on native runners (cgo + libpcap), with checksums and SBOM, and attach to a GitHub Release.
 - **Done when:** a dry run (`goreleaser release --snapshot --clean`) passes in CI. 👤 The owner pushes the first tag.
