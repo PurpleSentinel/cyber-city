@@ -93,7 +93,12 @@ func run(ctx context.Context, cfg config.Config) error {
 	if err != nil {
 		return err
 	}
-	url := server.BaseURL(ln.Addr())
+	auth, err := server.NewAuth()
+	if err != nil {
+		_ = ln.Close()
+		return err
+	}
+	url := auth.AuthURL(server.BaseURL(ln.Addr()))
 	if cfg.URLFile != "" {
 		if err := server.WriteURLFile(cfg.URLFile, url); err != nil {
 			_ = ln.Close()
@@ -103,7 +108,7 @@ func run(ctx context.Context, cfg config.Config) error {
 
 	hub := server.NewHub(p.Snapshot)
 	srv := &http.Server{
-		Handler:           server.Handler(hub, web.Dist()),
+		Handler:           server.Handler(hub, web.Dist(), auth),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 	serveErr := make(chan error, 1)
