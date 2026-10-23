@@ -317,7 +317,7 @@ Split into two PRs (AGENTS.md size rule):
 - **Do:** raycast picking, hover tooltip, click panel fields, `F`/`Esc` (V).
 - **Done when:** an e2e test clicks the projected screen position of a known host id and the panel shows that id.
 
-### [ ] T3.11 HUD, keys and help
+### [x] T3.11 HUD, keys and help
 - **Depends:** T3.1. **Touches:** `web/src/ui/hud.ts`.
 - **Do:** HUD fields, pause, the help overlay (V).
 - **Done when:** a Vitest DOM test covers the HUD formatting, and e2e checks that `Space` toggles `Paused`.

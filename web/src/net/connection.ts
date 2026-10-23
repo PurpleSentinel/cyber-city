@@ -73,6 +73,11 @@ export class Connection {
     this.open();
   }
 
+  /** Drops the socket and reconnects for a fresh hello (e.g. after a pause). */
+  resync(): void {
+    this.reconnectNow();
+  }
+
   stop(): void {
     this.stopped = true;
     this.socket?.close();
