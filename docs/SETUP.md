@@ -24,12 +24,12 @@ You also need a browser with **hardware-accelerated WebGL 2**: a current Chrome,
 ## 2. Build
 
 ```bash
-make setup     # go mod download, npm ci in web/, Playwright Chromium and its system libraries
+make setup     # go mod download, npm ci in web/, Playwright Chromium for the e2e tests
 make build     # vite build, then go build: bin/cybercity with the frontend embedded
 bin/cybercity --version
 ```
 
-`make setup` installs Playwright only for the end-to-end tests. To build without it, run `go mod download` and `cd web && npm ci` instead.
+`make setup` installs Playwright's Chromium only for the end-to-end tests. On Debian and Ubuntu it also installs Chromium's system libraries through `apt-get`, which asks for sudo. Elsewhere (for example Fedora) it skips them and prints the `dnf` command to use if `make e2e` cannot launch the browser. To build without Playwright at all, run `go mod download` and `cd web && npm ci` instead.
 
 The result is a single binary: `bin/cybercity` serves the page itself, so there is nothing else to deploy.
 

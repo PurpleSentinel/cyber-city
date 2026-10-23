@@ -25,7 +25,7 @@ help: ## List targets
 .PHONY: setup
 setup: ## Download Go modules, install web deps and Playwright Chromium
 	$(GO) mod download
-	$(call when_exists,$(WEB)/package.json,cd $(WEB) && $(NPM) ci && npx playwright install --with-deps chromium,T0.2)
+	$(call when_exists,$(WEB)/package.json,cd $(WEB) && $(NPM) ci && ../tools/setup-playwright.sh,T0.2)
 
 .PHONY: fixtures
 fixtures: ## Regenerate testdata/ with fixturegen
