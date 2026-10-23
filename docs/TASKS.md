@@ -287,7 +287,7 @@ Split into two PRs (AGENTS.md size rule):
   - A PR screenshot at `pose=auto` shows solid, lit buildings casting shadows.
   - The e2e shading test (T step 5) passes once T3.12 lands.
 
-### [ ] T3.5 Facade windows
+### [x] T3.5 Facade windows
 - **Depends:** T3.4. **Touches:** the building shader.
 - **Do:** service-category columns and the SSH blink (V).
 - **Done when:** a unit test checks the bitmask packing, and a shader compile check passes (renderer `compile()` in e2e).

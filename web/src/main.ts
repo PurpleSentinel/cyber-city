@@ -190,7 +190,7 @@ function animate(now?: number): void {
   requestAnimationFrame(animate);
   timer.update(now);
   const dt = Math.min(timer.getDelta(), 0.1);
-  buildings.frame(dt);
+  buildings.frame(dt, timer.getElapsed());
   applyPose();
   controls.update();
   renderer.render(scene, camera);
