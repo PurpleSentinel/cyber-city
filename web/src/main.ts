@@ -10,6 +10,7 @@ import { INVALID_LINK_MESSAGE } from "./net/session";
 import type { Host } from "./protocol";
 import { Buildings } from "./render/buildings";
 import { Lightning } from "./render/effects/lightning";
+import { Meteors } from "./render/effects/meteor";
 import { Searchlights } from "./render/effects/searchlight";
 import { Highways } from "./render/highways";
 import { Particles } from "./render/particles";
@@ -40,7 +41,8 @@ configureRenderer(renderer, quality);
 document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(PALETTE.bg, SCENE.fogDensity);
+const fog = new THREE.FogExp2(PALETTE.bg, SCENE.fogDensity);
+scene.fog = fog;
 const camera = new THREE.PerspectiveCamera(CAMERA.fov, window.innerWidth / window.innerHeight, CAMERA.near, CAMERA.far);
 camera.position.set(...CAMERA.position);
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -64,6 +66,8 @@ const lightning = new Lightning();
 scene.add(lightning.group);
 const searchlights = new Searchlights((id) => buildings.geometry(id));
 scene.add(searchlights.group);
+const meteors = new Meteors((id) => buildings.geometry(id));
+scene.add(meteors.group);
 const highwayModel = new HighwayModel();
 const highways = new Highways();
 scene.add(highways.mesh);
@@ -199,6 +203,8 @@ store.subscribe({
         const g = buildings.geometry(id);
         if (g) lightning.strike(g.x, g.z, g.base + g.height);
       }
+    } else if (e.kind === "flood" && e.dst) {
+      meteors.start(e.dst, qualityCtl.mode === "low");
     }
   },
   hostRemoved(id) {
@@ -366,6 +372,10 @@ function animate(now?: number): void {
   buildings.frame(dt, timer.getElapsed());
   lightning.frame(dt);
   searchlights.frame(dt);
+  meteors.frame(dt);
+  const sky = meteors.skyColor();
+  fog.color.copy(sky);
+  renderer.setClearColor(sky);
   particles.frame(dt);
   const posed = applyPose();
   stepFlight(dt);
