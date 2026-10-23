@@ -78,9 +78,11 @@ type Pipeline struct {
 	events []protocol.Event // events since the last tick
 	// lastClassify is the packet time of the last device-class pass.
 	lastClassify time.Time
-	flowRTT      map[flowKey]float64 // most recent handshake RTT per flow key
-	dec          *Decoder
-	tracker      *ServerTracker
+	// lastIdleSweep is the packet time of the last idle-host sweep.
+	lastIdleSweep time.Time
+	flowRTT       map[flowKey]float64 // most recent handshake RTT per flow key
+	dec           *Decoder
+	tracker       *ServerTracker
 
 	// Window state, owned by the pipeline goroutine.
 	started     bool
@@ -422,12 +424,16 @@ func (p *Pipeline) evictOldest() {
 	}
 }
 
-// removeIdle drops hosts silent for IdleTimeout as of packet time now;
-// callers hold p.mu.
+// idleSweepEvery bounds how often removeIdle scans the host table.
+const idleSweepEvery = time.Second
+
+// removeIdle drops hosts silent for IdleTimeout as of packet time now,
+// sweeping at most once per second of packet time; callers hold p.mu.
 func (p *Pipeline) removeIdle(now time.Time) {
-	if p.opts.IdleTimeout <= 0 {
+	if p.opts.IdleTimeout <= 0 || now.Sub(p.lastIdleSweep) < idleSweepEvery {
 		return
 	}
+	p.lastIdleSweep = now
 	for _, h := range p.hosts {
 		if now.Sub(h.lastSeen) >= p.opts.IdleTimeout {
 			if h.local {

@@ -393,7 +393,7 @@ The owner picks a licence (MIT or Apache-2.0 suggested). An agent then adds `LIC
   - Visibility (SPAN/TAP), the security model, privacy flags, "Heuristic — not an IDS", and the GPU requirement.
 - **Done when:** every command in the README is exercised by CI or the e2e job, and the README claims nothing the code doesn't do.
 
-### [ ] T5.4 Performance check
+### [x] T5.4 Performance check
 - **Depends:** T3.12. **Touches:** `web/e2e/perf.spec.ts`, `internal/pipeline` benchmarks.
 - **Do:** the pipeline sustains ≥ 200k packets/s in replay with `-race` off; e2e records frame time at 2000 hosts (a synthetic many-hosts fixture).
 - **Done when:** the numbers are reported in the PR, and regressions of more than 20% against the stored baseline fail a non-blocking CI job.

@@ -61,6 +61,35 @@ var fixtures = []fixture{
 	{"vlan", vlan},
 	{"gateway", gatewayFixture},
 	{"demo", demo},
+	{"many_hosts", manyHosts},
+}
+
+// many_hosts: 2000 hosts for the frame-time check (docs/TASKS.md T5.4). 1000
+// local clients in 10.0.16.0/22 each exchange a UDP datagram with their own
+// server every 4 s for 16 s: 762 servers in the documentation ranges and 238
+// local ones in 10.0.30.0/24.
+func manyHosts(v vendors) *gen {
+	g := newGen(13)
+	var servers []host
+	for _, prefix := range []string{"192.0.2.", "198.51.100.", "203.0.113."} {
+		for i := 1; i <= 254; i++ {
+			servers = append(servers, externalHost(fmt.Sprintf("%s%d", prefix, i)))
+		}
+	}
+	for i := 1; len(servers) < 1000; i++ {
+		servers = append(servers, localHost(fmt.Sprintf("10.0.30.%d", i), noVendor))
+	}
+	for i, s := range servers {
+		c := localHost(fmt.Sprintf("10.0.%d.%d", 16+i/250, 1+i%250), v.apple)
+		start := time.Duration(i) * 4 * time.Millisecond
+		for k := range 4 {
+			at := start + time.Duration(k)*4*time.Second
+			cport := uint16(40000 + i) //nolint:gosec // < 65536
+			g.udp(at, c, s, cport, 443, 120)
+			g.udp(at+ms(15), s, c, 443, cport, 900)
+		}
+	}
+	return g
 }
 
 // web_https: 10.0.1.10 makes 3 TLS-port connections to 203.0.113.10 with a
