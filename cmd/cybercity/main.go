@@ -104,9 +104,17 @@ func run(ctx context.Context, cfg config.Config) error {
 			MinHosts:           cfg.Detect.Scan.MinHosts,
 			MinIncompleteRatio: cfg.Detect.Scan.MinIncompleteRatio,
 			UDPMinPorts:        cfg.Detect.Scan.UDPMinPorts,
+		}), detect.NewFlood(detect.FloodConfig{
+			Window:           cfg.Detect.Flood.Window.D(),
+			BaselineHalfLife: cfg.Detect.Flood.BaselineHalfLife.D(),
+			MinHistory:       cfg.Detect.Flood.MinHistory.D(),
+			Multiplier:       cfg.Detect.Flood.Multiplier,
+			MinPPS:           cfg.Detect.Flood.MinPPS,
+			MinSources:       cfg.Detect.Flood.MinSources,
 		})},
 		Cooldowns: map[string]time.Duration{
 			protocol.EventPortScan: cfg.Detect.Scan.Cooldown.D(),
+			protocol.EventFlood:    cfg.Detect.Flood.Cooldown.D(),
 		},
 		Server:    info,
 		Anonymize: cfg.Anonymize,

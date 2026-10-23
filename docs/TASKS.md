@@ -341,7 +341,7 @@ Split into two PRs (AGENTS.md size rule):
 - **Do:** the scan rules in C (TCP and UDP).
 - **Done when:** the `scan_syn` and `scan_sweep` assertions pass and `web_https`, `dns`, `ssh`, `demo` (except its one scan) have zero `port_scan` events.
 
-### [ ] T4.3 Flood detector
+### [x] T4.3 Flood detector
 - **Depends:** T4.1. **Touches:** `internal/detect/flood.go`.
 - **Do:** the flood rules in C, with the baseline frozen during floods.
 - **Done when:** the `flood` assertions pass and no other fixture has `flood` events.

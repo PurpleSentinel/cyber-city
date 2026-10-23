@@ -43,8 +43,11 @@ func testOptions() Options {
 		Server:           protocol.ServerInfo{Version: "test", Source: "file"},
 		Detectors: []detect.Detector{detect.NewScan(detect.ScanConfig{
 			Window: 10 * time.Second, MinPorts: 50, MinHosts: 20, MinIncompleteRatio: 0.8, UDPMinPorts: 100,
+		}), detect.NewFlood(detect.FloodConfig{
+			Window: 5 * time.Second, BaselineHalfLife: 60 * time.Second, MinHistory: 30 * time.Second,
+			Multiplier: 10, MinPPS: 2000, MinSources: 50,
 		})},
-		Cooldowns: map[string]time.Duration{protocol.EventPortScan: 60 * time.Second},
+		Cooldowns: map[string]time.Duration{protocol.EventPortScan: 60 * time.Second, protocol.EventFlood: 60 * time.Second},
 	}
 }
 
