@@ -64,13 +64,26 @@ func (s *File) open() error {
 	return nil
 }
 
+func (s *File) rewind() error {
+	if _, err := s.f.Seek(0, io.SeekStart); err != nil {
+		return fmt.Errorf("rewind %s: %w", s.path, err)
+	}
+	r, err := pcapgo.NewReader(s.f)
+	if err != nil {
+		return fmt.Errorf("rewind %s: %w", s.path, err)
+	}
+	s.r = r
+	return nil
+}
+
 // Next returns the next frame, restarting the file at EOF when looping.
 func (s *File) Next() ([]byte, gopacket.CaptureInfo, error) {
 	for {
 		data, ci, err := s.r.ReadPacketData()
 		if errors.Is(err, io.EOF) && s.loop && !s.first.IsZero() {
-			_ = s.f.Close()
-			if err := s.open(); err != nil {
+			// Rewind the open file rather than reopening the path: after a
+			// privilege drop the path may no longer be readable (D22).
+			if err := s.rewind(); err != nil {
 				return nil, ci, err
 			}
 			s.offset += s.last.Sub(s.first) + loopGap

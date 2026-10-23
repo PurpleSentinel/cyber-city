@@ -58,7 +58,6 @@ func notYet(cfg config.Config) error {
 		{cfg.ListIfaces, "--list-ifaces", "T2.1"},
 		{cfg.Iface != "", "--iface", "T2.1"},
 		{cfg.BPF != "", "--bpf", "T2.2"},
-		{cfg.User != "", "--user", "T1.6"},
 		{cfg.Districts != "", "--districts", "T2.11"},
 		{cfg.GeoIP != "", "--geoip", "T2.12"},
 		{cfg.Anonymize, "--anonymize", "T1.7"},
@@ -86,7 +85,7 @@ func run(ctx context.Context, cfg config.Config) error {
 	})
 
 	if cfg.DumpJSON != "" {
-		return dumpJSON(ctx, cfg.DumpJSON, src, p)
+		return dumpJSON(ctx, cfg, src, p)
 	}
 
 	ln, err := server.Listen(cfg.Listen, slog.Default())
@@ -104,6 +103,12 @@ func run(ctx context.Context, cfg config.Config) error {
 			_ = ln.Close()
 			return fmt.Errorf("url file: %w", err)
 		}
+		giveToSudoUser(cfg.URLFile)
+	}
+	// Capture handle, listener and URL file are open: give up root (D22).
+	if err := dropPrivileges(cfg); err != nil {
+		_ = ln.Close()
+		return err
 	}
 
 	hub := server.NewHub(p.Snapshot, server.AllowedOrigins(ln.Addr(), cfg.AllowOrigins), server.HubOptions{
@@ -164,7 +169,8 @@ func openSource(cfg config.Config) (capture.Source, protocol.ServerInfo, error) 
 	return live, info, nil
 }
 
-func dumpJSON(ctx context.Context, path string, src capture.Source, p *pipeline.Pipeline) (err error) {
+func dumpJSON(ctx context.Context, cfg config.Config, src capture.Source, p *pipeline.Pipeline) (err error) {
+	path := cfg.DumpJSON
 	var w io.Writer = os.Stdout
 	if path != "-" {
 		f, err := os.Create(path) //nolint:gosec // operator-supplied output path
@@ -177,6 +183,9 @@ func dumpJSON(ctx context.Context, path string, src capture.Source, p *pipeline.
 			}
 		}()
 		w = f
+	}
+	if err := dropPrivileges(cfg); err != nil {
+		return err
 	}
 	sink, err := pipeline.NewJSONLSink(w, p.Snapshot())
 	if err != nil {

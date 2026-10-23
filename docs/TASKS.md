@@ -138,7 +138,7 @@ Split into two PRs (AGENTS.md size rule):
   - The broadcaster never holds a lock while writing to a socket.
 - **Done when:** the T slow-client, oversize-message and max-clients rows pass under `-race`.
 
-### [ ] T1.6 Privilege handling
+### [x] T1.6 Privilege handling
 - **Depends:** T0.8. **Touches:** `internal/privdrop`, `cmd/cybercity`, `Makefile` (`setcap`), README.
 - **Do:**
   - Follow the C startup order.

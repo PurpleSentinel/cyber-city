@@ -31,12 +31,12 @@ Precedence: built-in defaults < config file (`--config`) < command-line flags.
 | `--log-level <lvl>` | `info` | `debug \| info \| warn \| error`, via `log/slog` to stderr. |
 | `--version` | | Print version and exit. |
 
-Startup order (privilege handling depends on it):
+Startup order (privilege handling depends on it; DECISIONS D22):
 1. Parse flags and config; load the districts and GeoIP files.
-2. Open the capture.
-3. Drop privileges (`setgroups([])`, `setgid`, `setuid`; abort on failure).
-4. Start HTTP.
-5. Print the URL.
+2. Open the capture (or the `--dump-json` output file).
+3. Bind the listener and write `--url-file` (handed to `SUDO_UID` when run under sudo).
+4. Drop privileges when root (`setgroups([])`, `setgid`, `setuid`, then verify root cannot be regained; abort on failure).
+5. Serve HTTP and print the URL.
 
 ## Config file keys and defaults
 

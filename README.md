@@ -15,7 +15,13 @@ Requires Go ≥ 1.25, Node 22 and libpcap headers (Fedora: `sudo dnf install gol
 ```bash
 make setup     # Go modules, web dependencies, Playwright browser
 make build     # builds the frontend and embeds it in bin/cybercity
-sudo bin/cybercity
+```
+
+Live capture needs packet-capture rights. Pick one:
+
+```bash
+make setcap && bin/cybercity   # recommended: grant only CAP_NET_RAW/CAP_NET_ADMIN, run as yourself
+sudo bin/cybercity             # or start as root: it drops to `nobody` (or --user NAME) once the capture is open
 ```
 
 Then open the URL it prints (`http://127.0.0.1:8080/auth?token=…`): the one-time token logs your browser in, so other web pages and users cannot read the feed. One process captures traffic and serves the page.
