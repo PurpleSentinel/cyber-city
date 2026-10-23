@@ -40,7 +40,7 @@ Traffic category (particles, highway tint, facade windows):
 - `PerspectiveCamera(fov 60, near 0.5, far 2000)`, start position `(170, 140, 170)`, looking at `(0, 0, 0)`.
 - `OrbitControls`: damping 0.08, `maxPolarAngle` 85°, distance 40–700.
 - `FogExp2(bg, 0.0022)`.
-- Renderer: `antialias: true`, `powerPreference: "high-performance"`, pixel ratio `min(devicePixelRatio, 2)` (forced to 1 in low quality), `toneMapping: ACESFilmicToneMapping`, `toneMappingExposure: 1.0`, `outputColorSpace: SRGBColorSpace`, `shadowMap.enabled = true` (high quality), `shadowMap.type = PCFSoftShadowMap`.
+- Renderer: `antialias: true`, `powerPreference: "high-performance"`, pixel ratio `min(devicePixelRatio, 2)` (forced to 1 in low quality), `toneMapping: ACESFilmicToneMapping`, `toneMappingExposure: 1.0`, `outputColorSpace: SRGBColorSpace`, `shadowMap.enabled = true` (high quality), `shadowMap.type = PCFShadowMap` (three.js r18x removed `PCFSoftShadowMap`).
 - Post-processing chain: `RenderPass` → `UnrealBloomPass(strength 0.9, radius 0.4, threshold 0.85)` → `OutputPass`, which applies tone mapping and sRGB. The threshold is high so that only emissive windows, edges and effects bloom, not the lit building bodies.
 
 ## Lighting, materials and shading
