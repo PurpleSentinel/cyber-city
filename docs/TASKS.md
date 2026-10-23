@@ -243,7 +243,7 @@ Split into two PRs (AGENTS.md size rule):
 
 ## Milestone 3: The city
 
-### [ ] T3.1 Frontend architecture and connection
+### [x] T3.1 Frontend architecture and connection
 - **Depends:** T0.4, T1.2. **Touches:** `web/src/**`.
 - **Do:**
   - Create the module layout from AGENTS.md and `web/src/config.ts` with every V constant.

@@ -16,4 +16,9 @@ export default tseslint.config(
       ],
     },
   },
+  {
+    // Tests may assert presence with `!`: a wrong guess fails the test anyway.
+    files: ["test/**/*.ts", "e2e/**/*.ts"],
+    rules: { "@typescript-eslint/no-non-null-assertion": "off" },
+  },
 );

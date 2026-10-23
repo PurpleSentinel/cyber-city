@@ -14,3 +14,20 @@ body {
   z-index: 100;
   text-shadow: 0 0 5px #00f0ff;
 }
+
+#overlay h1 {
+  margin: 0 0 8px;
+  font-size: 22px;
+  letter-spacing: 0.08em;
+}
+
+#renderer {
+  opacity: 0.6;
+  font-size: 11px;
+}
+
+#warning {
+  color: #ff2040;
+  text-shadow: 0 0 5px #ff2040;
+  font-weight: bold;
+}
