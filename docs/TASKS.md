@@ -84,6 +84,10 @@ Spec abbreviations: **P** = PROTOCOL.md, **C** = CONFIG.md, **V** = VISUAL_SPEC.
   - A test reads each pcap back and checks packet counts and time spans against a table in fixturegen.
 
 ### [ ] T0.8 File replay and the golden harness
+Split into two PRs (AGENTS.md size rule):
+- [x] **T0.8a Decode and flow keying**: `DecodingLayerParser` decoder (Ethernet, 802.1Q, IPv4/6, TCP, UDP, ICMP/ICMPv6) producing header-length-based records; category table; service-port rules with a bounded per-connection cache. This pulls forward the decoding part of T2.3 and the keying part of T2.4; those tasks keep their remaining "Done when" checks.
+- [ ] **T0.8b Replay, windows and golden**: the rest of this task.
+
 - **Depends:** T0.4, T0.5, T0.7. **Touches:** `internal/capture/file.go`, `internal/pipeline`, `cmd/cybercity`.
 - **Do:**
   - `Source` interface; `--read`, `--replay-speed`, `--loop`, `--dump-json`.
