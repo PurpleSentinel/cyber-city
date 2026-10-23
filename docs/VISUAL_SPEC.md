@@ -126,8 +126,8 @@ Everything is deterministic: positions depend only on ids, never on random numbe
 
 - One road per host pair with traffic in the last 3 s. At most 500, chosen by rate; the rest are not drawn.
 - Route:
-  - local ↔ local: an L-shaped path (x first, then z) between building centres, at y = 0.1.
-  - Anything involving the Outlands: a straight line, at y = 0.1.
+  - local ↔ local: an L-shaped path (x first, then z) between building centres, 0.1 above the plot tops (y = 0.3).
+  - Anything involving the Outlands: a straight line, at the same height.
 - Width `w = clamp(0.2 + 0.6·log10(1 + pairRate/1000), 0.2, 3)`. Rendered as instanced flat quads, additive blending, colour = the dominant category of the pair over the last 3 s, opacity 0.35.
 - After the last packet, opacity decays to 0 over 3 s, then the road is freed.
 
