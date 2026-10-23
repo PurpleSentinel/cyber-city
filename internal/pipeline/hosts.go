@@ -40,7 +40,12 @@ func (p *Pipeline) wire(h *hostState) protocol.Host {
 			vendor = protocol.Ptr(v)
 		}
 	}
+	var geo *protocol.Geo
+	if !h.local {
+		geo = p.opts.Geo.Lookup(h.addr)
+	}
 	return protocol.Host{
+		Geo:         geo,
 		MAC:         mac,
 		Vendor:      vendor,
 		RTTMS:       rtt,

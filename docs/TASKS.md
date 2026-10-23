@@ -229,7 +229,7 @@ Split into two PRs (AGENTS.md size rule):
 - **Do:** load the districts file, VLAN-then-CIDR matching, auto districts and anonymous naming (P), and late-district announcement in ticks.
 - **Done when:** the `vlan` fixture assertions pass, and auto-district ids match P for `web_https` without a districts file.
 
-### [ ] T2.12 GeoIP sectors
+### [x] T2.12 GeoIP sectors
 - **Depends:** T2.5, T0.7. **Touches:** `internal/enrich/geo.go`.
 - **Do:** optional GeoIP lookup and the bearing → sector rule (C); `geo` only for non-local hosts; `server.geoip` in `hello`.
 - **Done when:** with the test mmdb and home `[51.5, −0.12]`, JP → NE, US → W, DE → E, and without `--geoip` every `geo` is `null`.
