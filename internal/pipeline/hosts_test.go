@@ -188,6 +188,28 @@ func TestMACVendorAndGateway(t *testing.T) {
 	}
 }
 
+// T2.10: demo.pcap yields every device class; spot-check known hosts.
+func TestDeviceClassesInDemo(t *testing.T) {
+	hosts := lastHosts(ticks(t, runFixture(t, "demo", testOptions())))
+	seen := map[string]int{}
+	for _, h := range hosts {
+		seen[h.DeviceClass]++
+	}
+	for _, c := range []string{protocol.ClassNetwork, protocol.ClassIoT, protocol.ClassServer, protocol.ClassWorkstation, protocol.ClassUnknown} {
+		if seen[c] == 0 {
+			t.Errorf("no %s host in demo (classes %v)", c, seen)
+		}
+	}
+	for id, want := range map[string]string{
+		"10.0.1.1": protocol.ClassNetwork, // gateway MAC
+		"10.0.9.5": protocol.ClassServer,  // SSH server with several clients
+	} {
+		if got := hosts[id].DeviceClass; got != want {
+			t.Errorf("%s class %s, want %s", id, got, want)
+		}
+	}
+}
+
 func TestScanProbesDoNotCreateServices(t *testing.T) {
 	h := lastHosts(ticks(t, runFixture(t, "scan_syn", testOptions())))["10.0.9.5"]
 	// Only the two open ports answered with SYN-ACK.

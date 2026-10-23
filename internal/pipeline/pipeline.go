@@ -29,6 +29,8 @@ type Options struct {
 	RetransWindow time.Duration
 	// GatewayMinIPs marks a MAC as a router's (enrich.gateway_min_ips, D13).
 	GatewayMinIPs int
+	// ClassInterval is how often device classes are re-evaluated.
+	ClassInterval time.Duration
 	// Server describes the sensor in hello messages.
 	Server protocol.ServerInfo
 	// Anonymize pseudonymises host ids and hides addresses (--anonymize).
@@ -55,15 +57,18 @@ type flowAgg struct {
 // Pipeline aggregates packet records into protocol ticks. Add and Advance
 // must be called from one goroutine; Snapshot may be called concurrently.
 type Pipeline struct {
-	opts    Options
-	id      *identity
-	svc     *enrich.Services
-	rtt     *enrich.RTT
-	retx    *enrich.Retrans
-	macs    *enrich.MACs
-	flowRTT map[flowKey]float64 // most recent handshake RTT per flow key
-	dec     *Decoder
-	tracker *ServerTracker
+	opts Options
+	id   *identity
+	svc  *enrich.Services
+	rtt  *enrich.RTT
+	retx *enrich.Retrans
+	macs *enrich.MACs
+	cls  *enrich.Classifier
+	// lastClassify is the packet time of the last device-class pass.
+	lastClassify time.Time
+	flowRTT      map[flowKey]float64 // most recent handshake RTT per flow key
+	dec          *Decoder
+	tracker      *ServerTracker
 
 	// Window state, owned by the pipeline goroutine.
 	started     bool
@@ -92,6 +97,7 @@ func New(opts Options) *Pipeline {
 		flowRTT:   make(map[flowKey]float64),
 		retx:      enrich.NewRetrans(opts.RetransWindow, max(1, opts.MaxTracked)),
 		macs:      enrich.NewMACs(max(1, opts.GatewayMinIPs), max(1, opts.MaxHosts)),
+		cls:       enrich.NewClassifier(),
 		dec:       NewDecoder(),
 		tracker:   NewServerTracker(opts.MaxTracked),
 		flows:     make(map[flowKey]*flowAgg),
@@ -146,6 +152,10 @@ func (p *Pipeline) add(r *Record) {
 		if h := p.hosts[a]; h != nil {
 			h.dirty = true
 		}
+	}
+	if d.ServerSide == SideDst && d.ServicePort != nil && !isGroup(d.Dst) {
+		port := *d.ServicePort
+		p.cls.Connection(d.Src, d.Dst, port, Category(r.Proto, &port), IsLocal(d.Dst), r.TS)
 	}
 	p.observeService(r, &d)
 	p.observeHandshake(r, &d, key)
@@ -319,6 +329,9 @@ func (p *Pipeline) tick(end time.Time) *protocol.Tick {
 	t.Stats.HostsTotal = len(p.hosts)
 	t.Districts, p.newDist = p.newDist, nil
 	p.removeIdle(end)
+	if end.Sub(p.lastClassify) >= p.opts.ClassInterval {
+		p.classify(end)
+	}
 	t.RemovedHosts, p.removed = p.removed, nil
 	for _, h := range p.hosts {
 		if h.dirty {
@@ -386,5 +399,28 @@ func (p *Pipeline) remove(h *hostState) {
 	p.rtt.Forget(h.addr)
 	p.retx.Forget(h.addr)
 	p.macs.Forget(h.addr)
+	p.cls.Forget(h.addr)
 	p.removed = append(p.removed, p.id.hostID(h.addr))
+}
+
+// classify re-evaluates every host's device class as of packet time now
+// (docs/CONFIG.md "Device class"); callers hold p.mu.
+func (p *Pipeline) classify(now time.Time) {
+	p.lastClassify = now
+	for _, h := range p.hosts {
+		_, vendor, _ := p.macs.For(h.addr)
+		confirmed := 0
+		for _, s := range p.svc.For(h.addr) {
+			if s.Confirmed {
+				confirmed++
+			}
+		}
+		class := p.cls.Classify(enrich.ClassInput{
+			Host: h.addr, Local: h.local, Vendor: vendor, Gateway: p.macs.IsGateway(h.addr),
+			ConfirmedServices: confirmed, Now: now,
+		})
+		if class != h.class {
+			h.class, h.dirty = class, true
+		}
+	}
 }
