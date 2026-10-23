@@ -234,7 +234,7 @@ Split into two PRs (AGENTS.md size rule):
 - **Do:** optional GeoIP lookup and the bearing → sector rule (C); `geo` only for non-local hosts; `server.geoip` in `hello`.
 - **Done when:** with the test mmdb and home `[51.5, −0.12]`, JP → NE, US → W, DE → E, and without `--geoip` every `geo` is `null`.
 
-### [ ] T2.13 Capture stats
+### [x] T2.13 Capture stats
 - **Depends:** T2.1. **Touches:** `internal/capture`.
 - **Do:** fill `stats.kernel_drops` and `if_drops` from `handle.Stats()` once per second (0 for files).
 - **Done when:** a unit test with a fake stats provider passes, and the live-smoke test asserts the fields exist.

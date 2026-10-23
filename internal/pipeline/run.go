@@ -13,6 +13,9 @@ import (
 	"github.com/PurpleSentinel/cyber-city/internal/protocol"
 )
 
+// statsInterval is how often capture drop counters are read (T2.13).
+const statsInterval = time.Second
+
 // Sink receives completed ticks in order.
 type Sink interface {
 	Tick(t *protocol.Tick) error
@@ -110,6 +113,8 @@ func Run(ctx context.Context, src capture.Source, p *Pipeline, sink Sink, speed 
 		tickC = ticker.C
 	}
 
+	var lastStats time.Time
+
 	emit := func(ticks []*protocol.Tick) error {
 		for _, t := range ticks {
 			if err := sink.Tick(t); err != nil {
@@ -138,8 +143,11 @@ func Run(ctx context.Context, src capture.Source, p *Pipeline, sink Sink, speed 
 				return err
 			}
 		case <-tickC:
-			p.SetDrops(src.Stats())
 			now := time.Now()
+			if now.Sub(lastStats) >= statsInterval {
+				p.SetDrops(src.Stats())
+				lastStats = now
+			}
 			if clock != nil {
 				var ok bool
 				if now, ok = clock.packetNow(); !ok {
