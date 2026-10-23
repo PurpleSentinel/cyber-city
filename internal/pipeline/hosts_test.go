@@ -225,7 +225,7 @@ func TestHostResentOnlyWhenChanged(t *testing.T) {
 	a := netip.MustParseAddr("10.0.0.1")
 	touch := func(at time.Duration) {
 		p.mu.Lock()
-		p.touch(a, base.Add(at))
+		p.touch(a, base.Add(at), 0)
 		p.mu.Unlock()
 	}
 	sent := func(end time.Duration) bool {
@@ -255,13 +255,13 @@ func TestMaxHostsEvictsLeastRecentlySeen(t *testing.T) {
 	p.start(base)
 	for i, ip := range []string{"10.0.0.1", "10.0.0.2", "10.0.0.3"} {
 		p.mu.Lock()
-		p.touch(netip.MustParseAddr(ip), base.Add(time.Duration(i)*time.Second))
+		p.touch(netip.MustParseAddr(ip), base.Add(time.Duration(i)*time.Second), 0)
 		p.mu.Unlock()
 	}
 	// Refresh .1 so .2 becomes the least recently seen, then add .4.
 	p.mu.Lock()
-	p.touch(netip.MustParseAddr("10.0.0.1"), base.Add(5*time.Second))
-	p.touch(netip.MustParseAddr("10.0.0.4"), base.Add(6*time.Second))
+	p.touch(netip.MustParseAddr("10.0.0.1"), base.Add(5*time.Second), 0)
+	p.touch(netip.MustParseAddr("10.0.0.4"), base.Add(6*time.Second), 0)
 	p.mu.Unlock()
 
 	if len(p.hosts) != 3 {

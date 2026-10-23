@@ -16,6 +16,7 @@ import (
 	"github.com/PurpleSentinel/cyber-city/internal/buildinfo"
 	"github.com/PurpleSentinel/cyber-city/internal/capture"
 	"github.com/PurpleSentinel/cyber-city/internal/config"
+	"github.com/PurpleSentinel/cyber-city/internal/districts"
 	"github.com/PurpleSentinel/cyber-city/internal/pipeline"
 	"github.com/PurpleSentinel/cyber-city/internal/protocol"
 	"github.com/PurpleSentinel/cyber-city/internal/server"
@@ -64,7 +65,6 @@ func notYet(cfg config.Config) error {
 		flag string
 		task string
 	}{
-		{cfg.Districts != "", "--districts", "T2.11"},
 		{cfg.GeoIP != "", "--geoip", "T2.12"},
 	}
 	for _, p := range pending {
@@ -87,7 +87,16 @@ func run(ctx context.Context, cfg config.Config) error {
 		}
 	}
 
+	var matcher *districts.Matcher
+	if cfg.Districts != "" {
+		defs, err := config.LoadDistricts(cfg.Districts)
+		if err != nil {
+			return err
+		}
+		matcher = districts.New(defs)
+	}
 	p := pipeline.New(pipeline.Options{
+		Districts:        matcher,
 		Window:           cfg.Window.D(),
 		Heartbeat:        cfg.Server.Heartbeat.D(),
 		MaxTracked:       cfg.Flows.MaxTracked,

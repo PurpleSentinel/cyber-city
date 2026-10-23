@@ -7,6 +7,7 @@ import (
 
 	"github.com/gopacket/gopacket"
 
+	"github.com/PurpleSentinel/cyber-city/internal/districts"
 	"github.com/PurpleSentinel/cyber-city/internal/enrich"
 	"github.com/PurpleSentinel/cyber-city/internal/protocol"
 )
@@ -31,6 +32,8 @@ type Options struct {
 	GatewayMinIPs int
 	// ClassInterval is how often device classes are re-evaluated.
 	ClassInterval time.Duration
+	// Districts assigns local hosts to configured districts (nil: auto only).
+	Districts *districts.Matcher
 	// Server describes the sensor in hello messages.
 	Server protocol.ServerInfo
 	// Anonymize pseudonymises host ids and hides addresses (--anonymize).
@@ -89,7 +92,7 @@ type Pipeline struct {
 
 // New returns an empty pipeline.
 func New(opts Options) *Pipeline {
-	return &Pipeline{
+	p := &Pipeline{
 		opts:      opts,
 		id:        newIdentity(opts.Anonymize, opts.AnonKey),
 		svc:       enrich.NewServices(max(1, opts.MaxServices)),
@@ -104,6 +107,10 @@ func New(opts Options) *Pipeline {
 		hosts:     make(map[netip.Addr]*hostState),
 		districts: map[string]protocol.District{protocol.OutlandsID: outlands()},
 	}
+	for _, d := range opts.Districts.Districts(opts.Anonymize) {
+		p.districts[d.ID] = d
+	}
+	return p
 }
 
 // Frame decodes and adds one raw frame, returning any ticks completed by its
@@ -146,8 +153,8 @@ func (p *Pipeline) add(r *Record) {
 	f.flags |= r.Flags
 
 	p.mu.Lock()
-	p.touch(r.Src, r.TS)
-	p.touch(r.Dst, r.TS)
+	p.touch(r.Src, r.TS, r.VLAN)
+	p.touch(r.Dst, r.TS, r.VLAN)
 	for _, a := range p.macs.Observe(r.SrcMAC, r.Src, IsLocal(r.Src), r.DstMAC, r.Dst, IsLocal(r.Dst)) {
 		if h := p.hosts[a]; h != nil {
 			h.dirty = true
@@ -233,15 +240,18 @@ func (p *Pipeline) observeService(r *Record, d *Direction) {
 	}
 }
 
-// touch records activity for a host; callers hold p.mu.
-func (p *Pipeline) touch(a netip.Addr, ts time.Time) {
+// touch records activity for a host seen in a frame on vlan (0: untagged);
+// callers hold p.mu.
+func (p *Pipeline) touch(a netip.Addr, ts time.Time, vlan uint16) {
 	if isGroup(a) {
 		return
 	}
 	h := p.hosts[a]
 	if h == nil {
 		h = &hostState{addr: a, local: IsLocal(a), firstSeen: ts, dirty: true}
-		if h.local {
+		if id, ok := p.opts.Districts.Match(a, vlan); h.local && ok {
+			h.district = id
+		} else if h.local {
 			d, isNew := p.id.district(a)
 			h.district = d.ID
 			if isNew {

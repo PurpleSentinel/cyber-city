@@ -224,7 +224,7 @@ Split into two PRs (AGENTS.md size rule):
 - **Do:** the C rules in order, re-evaluated every `class_interval`, with vendor lists as package-level data.
 - **Done when:** a table test has one case per rule plus precedence cases, and `demo` golden output has at least one host of every class.
 
-### [ ] T2.11 Districts
+### [x] T2.11 Districts
 - **Depends:** T2.3, T2.5. **Touches:** `internal/districts`.
 - **Do:** load the districts file, VLAN-then-CIDR matching, auto districts and anonymous naming (P), and late-district announcement in ticks.
 - **Done when:** the `vlan` fixture assertions pass, and auto-district ids match P for `web_https` without a districts file.
