@@ -107,8 +107,8 @@ Conformance: Go writes canonical example messages to `testdata/protocol/{hello,t
 Runs on pull requests and pushes to `main`. Jobs:
 - **go**: on ubuntu-latest, `apt-get install libpcap-dev`, then `go vet`, `golangci-lint`, `go test -race ./...`, `govulncheck`, and the fixturegen diff check.
 - **web**: `npm ci`, `tsc --noEmit`, `eslint`, `vitest run`, `vite build`.
-- **e2e**: needs both jobs; builds the binary with the web bundle, then runs Playwright and uploads the screenshot.
-- **live-smoke**: runs `sudo go test -tags live ./internal/capture` on the `lo` interface.
+- **e2e**: needs both jobs; runs the README quick start verbatim (`make setup`, `make build`, then `tools/ci/readme-smoke.sh` for the README's `bin/cybercity` commands), then Playwright, and uploads the screenshots, `perf.json` and the `demo.webm` recording.
+- **live-smoke**: runs `sudo go test -tags live ./internal/capture` on the `lo` interface, the privilege-drop smoke test, and the README's live quick start (`tools/ci/live-quickstart.sh`: `make setcap`, then an unprivileged live capture).
 - **release-dry-run**: `goreleaser release --snapshot --clean` on amd64 (T5.2).
 - **perf** (non-blocking): see *Performance* below.
 
