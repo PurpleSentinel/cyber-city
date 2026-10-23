@@ -1,0 +1,16 @@
+body {
+  margin: 0;
+  overflow: hidden;
+  background-color: #05050a;
+  font-family: monospace;
+  color: #00f0ff;
+}
+
+#overlay {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  pointer-events: none;
+  z-index: 100;
+  text-shadow: 0 0 5px #00f0ff;
+}

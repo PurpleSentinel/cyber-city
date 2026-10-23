@@ -37,7 +37,7 @@ oui: ## Regenerate the OUI vendor table (needs network)
 
 .PHONY: web
 web: ## Build the frontend into web/dist
-	$(call when_exists,$(WEB)/package.json,cd $(WEB) && $(NPM) run build,T0.2)
+	$(call when_exists,$(WEB)/package.json,cd $(WEB) && $(NPM) run build && touch dist/.gitkeep,T0.2)
 
 .PHONY: build
 build: web ## Build bin/cybercity with the embedded frontend

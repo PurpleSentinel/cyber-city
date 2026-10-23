@@ -17,14 +17,14 @@ Spec abbreviations: **P** = PROTOCOL.md, **C** = CONFIG.md, **V** = VISUAL_SPEC.
 ### [x] T0.1 Toolchain and repo hygiene
 - **Depends:** none. **Touches:** `Makefile`, `.gitignore`, `.editorconfig`, `.golangci.yml`, `.nvmrc`, `go.mod`.
 - **Do:**
-  - Root `go.mod` (`module github.com/PurpleSentinel/cyber-city`, Go ≥ 1.24 with a `toolchain` line).
+  - Root `go.mod` (`module github.com/PurpleSentinel/cyber-city`, Go ≥ 1.25 with a `toolchain` line).
   - `.nvmrc` with `22`.
   - Makefile targets exactly as listed in AGENTS.md (stubs may echo "not yet" until their task lands).
   - `.gitignore` covering `bin/`, `web/node_modules/`, `web/dist/*` except `.gitkeep`, `web/e2e/artifacts/`, `*.pcap` outside `testdata/`.
   - `.golangci.yml` enabling govet, staticcheck, errcheck, gosec, revive, gofmt.
 - **Done when:** `make help` lists all targets, and `go mod tidy` and `go vet ./...` succeed.
 
-### [ ] T0.2 Restructure to the target layout
+### [x] T0.2 Restructure to the target layout
 - **Depends:** T0.1. **Touches:** everything under `sniffer/`, `frontend/`, `tools/generator/`; new `cmd/`, `internal/`, `web/`.
 - **Do:**
   - Move the prototype into the AGENTS.md layout with **no behaviour change**:
