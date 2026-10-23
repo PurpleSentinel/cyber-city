@@ -12,6 +12,8 @@ import (
 	"time"
 
 	"github.com/PurpleSentinel/cyber-city/internal/capture"
+	"github.com/PurpleSentinel/cyber-city/internal/config"
+	"github.com/PurpleSentinel/cyber-city/internal/districts"
 	"github.com/PurpleSentinel/cyber-city/internal/protocol"
 )
 
@@ -62,10 +64,24 @@ func runFixture(t testing.TB, name string, opts Options) []byte {
 	return buf.Bytes()
 }
 
+// fixtureOptions returns the golden options for a fixture: vlan runs with the
+// example districts file (docs/TESTING.md "Golden tests").
+func fixtureOptions(t testing.TB, name string) Options {
+	o := testOptions()
+	if name == "vlan" {
+		defs, err := config.LoadDistricts(filepath.Join("..", "..", "config", "districts.example.yaml"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		o.Districts = districts.New(defs)
+	}
+	return o
+}
+
 func TestGolden(t *testing.T) {
 	for _, name := range fixtureNames {
 		t.Run(name, func(t *testing.T) {
-			got := runFixture(t, name, testOptions())
+			got := runFixture(t, name, fixtureOptions(t, name))
 			path := filepath.Join("..", "..", "testdata", "golden", name+".jsonl")
 			if *update {
 				if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
@@ -135,6 +151,34 @@ func TestIPv6FixtureAssertions(t *testing.T) {
 	}
 	if !sawTCP6 || !sawNDP || !sawLocal {
 		t.Fatalf("tcp6 https=%v ndp control=%v fd00:1::10 local=%v", sawTCP6, sawNDP, sawLocal)
+	}
+}
+
+// docs/TESTING.md vlan row: corp and core assigned by VLAN with the example file.
+func TestVLANDistricts(t *testing.T) {
+	out := runFixture(t, "vlan", fixtureOptions(t, "vlan"))
+	var hello protocol.Hello
+	if err := json.Unmarshal(bytes.SplitN(out, []byte("\n"), 2)[0], &hello); err != nil {
+		t.Fatal(err)
+	}
+	ids := map[string]bool{}
+	for _, d := range hello.Districts {
+		ids[d.ID] = true
+	}
+	if !ids["core"] || !ids["corp"] {
+		t.Fatalf("configured districts missing from hello: %v", ids)
+	}
+	want := map[string]string{"10.0.1.10": "corp", "10.0.1.11": "corp", "10.0.1.1": "corp", "10.0.9.5": "core", "10.0.9.6": "core"}
+	got := map[string]string{}
+	for _, tk := range ticks(t, out) {
+		for _, h := range tk.Hosts {
+			got[h.ID] = h.District
+		}
+	}
+	for id, d := range want {
+		if got[id] != d {
+			t.Errorf("%s district %q, want %q", id, got[id], d)
+		}
 	}
 }
 
