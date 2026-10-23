@@ -65,7 +65,7 @@ Spec abbreviations: **P** = PROTOCOL.md, **C** = CONFIG.md, **V** = VISUAL_SPEC.
   - There is one table test per validation error.
   - `cybercity --help` shows every flag in C.
 
-### [ ] T0.6 OUI vendor table
+### [x] T0.6 OUI vendor table
 - **Depends:** T0.2. **Touches:** `internal/enrich/oui*`, `tools/ouigen`.
 - **Do:**
   - `tools/ouigen` downloads (or reads with `-in`) the IEEE MA-L CSV and writes `internal/enrich/oui_table.go`: a sorted `[]struct{prefix uint32; vendor string}` with binary search, vendor names trimmed.
