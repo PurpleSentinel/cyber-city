@@ -312,7 +312,7 @@ Split into two PRs (AGENTS.md size rule):
 - **Do:** bloom (threshold 0.85, so lit bodies don't bloom), OutputPass, low-quality toggle `L` (drops shadows, bloom and half the particles, but materials stay lit), automatic low quality on software rendering, and the `quality=` debug override.
 - **Done when:** the debug hook reports `quality` and `shadows` correctly; under SwiftShader the default is `low` with `lit === true`, and `quality=high` turns shadows on.
 
-### [ ] T3.10 Inspector and picking
+### [x] T3.10 Inspector and picking
 - **Depends:** T3.4. **Touches:** `web/src/ui/inspector.ts`.
 - **Do:** raycast picking, hover tooltip, click panel fields, `F`/`Esc` (V).
 - **Done when:** an e2e test clicks the projected screen position of a known host id and the panel shows that id.

@@ -37,6 +37,7 @@ export function servicesMask(h: Host): number {
 export class Buildings {
   readonly mesh: THREE.InstancedMesh;
   private readonly byId = new Map<string, Building>();
+  private readonly idByIndex: (string | undefined)[] = [];
   private readonly free: number[] = [];
   private readonly color: THREE.InstancedBufferAttribute;
   private readonly services: THREE.InstancedBufferAttribute;
@@ -86,6 +87,7 @@ export class Buildings {
       height: 1, rate: newRate(), fadeIn: 0, removing: null, local: h.local, flash: 0,
     };
     this.byId.set(h.id, b);
+    this.idByIndex[index] = h.id;
     this.update(h);
     this.state.setY(index, 0).setZ(index, 0).setW(index, 0);
   }
@@ -107,7 +109,14 @@ export class Buildings {
     if (b && b.removing === null) b.removing = 0;
   }
 
+  /** Host id drawn by an instance (for raycast picking). */
+  idAt(index: number): string | null {
+    const id = this.idByIndex[index];
+    return id !== undefined && this.byId.get(id)?.removing === null ? id : null;
+  }
+
   clear(): void {
+    this.idByIndex.length = 0;
     this.byId.clear();
     this.free.length = 0;
     this.mesh.count = 0;
@@ -166,6 +175,7 @@ export class Buildings {
       this.dummy.updateMatrix();
       this.mesh.setMatrixAt(b.index, this.dummy.matrix);
       this.free.push(b.index);
+      this.idByIndex[b.index] = undefined;
       this.byId.delete(id);
     }
     this.mesh.instanceMatrix.needsUpdate = true;
