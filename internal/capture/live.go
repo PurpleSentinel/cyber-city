@@ -1,5 +1,4 @@
-// Package capture opens packet sources: live interfaces (libpcap) and, from
-// T0.8, capture files.
+// Package capture opens packet sources: live interfaces (libpcap) and capture files.
 package capture
 
 import (
@@ -35,10 +34,28 @@ func OpenFirstDevice(snaplen int32, promisc bool) (*Live, error) {
 	return &Live{Device: device, handle: handle}, nil
 }
 
-// Packets returns the decoded packet stream; it closes when the handle closes.
-func (l *Live) Packets() <-chan gopacket.Packet {
-	return gopacket.NewPacketSource(l.handle, l.handle.LinkType()).Packets()
+// Next returns the next frame, skipping read timeouts.
+func (l *Live) Next() ([]byte, gopacket.CaptureInfo, error) {
+	for {
+		data, ci, err := l.handle.ReadPacketData()
+		if errors.Is(err, pcap.NextErrorTimeoutExpired) {
+			continue
+		}
+		return data, ci, err
+	}
+}
+
+// Live is true: timestamps track the wall clock.
+func (l *Live) Live() bool { return true }
+
+// Stats returns cumulative kernel and interface drops.
+func (l *Live) Stats() (uint64, uint64) {
+	s, err := l.handle.Stats()
+	if err != nil {
+		return 0, 0
+	}
+	return uint64(max(0, s.PacketsDropped)), uint64(max(0, s.PacketsIfDropped)) //nolint:gosec // non-negative
 }
 
 // Close releases the capture handle.
-func (l *Live) Close() { l.handle.Close() }
+func (l *Live) Close() error { l.handle.Close(); return nil }

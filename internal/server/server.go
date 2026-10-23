@@ -1,51 +1,81 @@
-// Package server serves the embedded frontend and streams windows to browsers
-// over WebSocket.
+// Package server serves the embedded frontend and streams protocol messages
+// to browsers over WebSocket.
 package server
 
 import (
 	"io/fs"
+	"log/slog"
 	"net/http"
 	"sync"
 
 	"github.com/gorilla/websocket"
+
+	"github.com/PurpleSentinel/cyber-city/internal/protocol"
 )
 
-// Hub fans broadcast messages out to connected WebSocket clients.
+// Hub sends each new client a hello snapshot, then every tick.
 //
-// Prototype behaviour, kept unchanged by T0.2: any origin may connect (T1.3) and
-// a slow client stalls the broadcast (T1.5).
+// Still prototype-grade: any origin may connect (T1.3) and a slow client
+// stalls the broadcast (T1.5).
 type Hub struct {
 	upgrader websocket.Upgrader
-	mu       sync.Mutex
-	clients  map[*websocket.Conn]bool
+	snapshot func() *protocol.Hello
+
+	mu      sync.Mutex
+	clients map[*websocket.Conn]*uint64 // per-connection tick sequence
 }
 
-// NewHub returns a hub with no clients.
-func NewHub() *Hub {
+// NewHub returns a hub that builds hello messages with snapshot.
+func NewHub(snapshot func() *protocol.Hello) *Hub {
 	return &Hub{
 		upgrader: websocket.Upgrader{CheckOrigin: func(*http.Request) bool { return true }},
-		clients:  make(map[*websocket.Conn]bool),
+		snapshot: snapshot,
+		clients:  make(map[*websocket.Conn]*uint64),
 	}
 }
 
-// Broadcast sends payload to every client, ignoring write errors.
-func (h *Hub) Broadcast(payload []byte) {
+// Tick broadcasts t, numbering it per connection (docs/PROTOCOL.md "tick").
+// It never fails: unwritable clients are dropped.
+func (h *Hub) Tick(t *protocol.Tick) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	for c := range h.clients {
-		_ = c.WriteMessage(websocket.TextMessage, payload)
+	for c, seq := range h.clients {
+		*seq++
+		msg := *t
+		msg.Seq = *seq
+		b, err := protocol.EncodeTick(&msg)
+		if err != nil {
+			return err
+		}
+		if err := c.WriteMessage(websocket.TextMessage, b); err != nil {
+			delete(h.clients, c)
+			_ = c.Close()
+		}
 	}
+	return nil
 }
 
-// ServeWS upgrades the request and keeps the client registered until it disconnects.
+// ServeWS upgrades the request, sends hello and registers the client. The
+// hub lock is held from snapshot to registration so no tick is missed.
 func (h *Hub) ServeWS(w http.ResponseWriter, r *http.Request) {
 	conn, err := h.upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		return
 	}
 	h.mu.Lock()
-	h.clients[conn] = true
+	b, err := protocol.EncodeHello(h.snapshot())
+	if err == nil {
+		err = conn.WriteMessage(websocket.TextMessage, b)
+	}
+	if err != nil {
+		h.mu.Unlock()
+		slog.Debug("hello failed", "err", err)
+		_ = conn.Close()
+		return
+	}
+	h.clients[conn] = new(uint64)
 	h.mu.Unlock()
+
 	defer func() {
 		h.mu.Lock()
 		delete(h.clients, conn)

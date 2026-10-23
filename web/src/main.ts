@@ -1,9 +1,9 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { parseBatch } from "./prototype";
+import { parseMessage } from "./protocol";
 import "./ui/styles.css";
 
-// Prototype renderer carried over unchanged in behaviour by T0.2. The shaded city
+// Prototype renderer, now fed by the v1 protocol (T0.8b). The shaded city
 // (docs/VISUAL_SPEC.md) replaces it in Milestone 3.
 
 const scene = new THREE.Scene();
@@ -72,12 +72,17 @@ const ws = new WebSocket(wsUrl);
 ws.onopen = () => setStatus("WS: Connected Live");
 ws.onclose = () => setStatus("WS: Disconnected");
 ws.onmessage = (event: MessageEvent<string>) => {
-  for (const flow of parseBatch(event.data)) {
-    const grow = flow.byte_count / 5000;
-    const src = getOrCreateHost(flow.src_ip, flow.src_is_local);
-    const dst = getOrCreateHost(flow.dst_ip, flow.dst_is_local);
-    if (src) src.targetHeight = Math.min(60, src.targetHeight + grow);
-    if (dst) dst.targetHeight = Math.min(60, dst.targetHeight + grow);
+  const msg = parseMessage(event.data);
+  if (!msg) return;
+  for (const h of msg.hosts) getOrCreateHost(h.id, h.local);
+  if (msg.type !== "tick") return;
+  for (const flow of msg.flows) {
+    const grow = flow.bytes / 5000;
+    // Flows to multicast/broadcast groups name no host (docs/DECISIONS.md D21).
+    for (const id of [flow.src, flow.dst]) {
+      const host = hosts.get(id);
+      if (host) host.targetHeight = Math.min(60, host.targetHeight + grow);
+    }
   }
 };
 

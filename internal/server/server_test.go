@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -10,11 +11,13 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+
+	"github.com/PurpleSentinel/cyber-city/internal/protocol"
 )
 
-func TestHandlerServesStaticAndBroadcasts(t *testing.T) {
+func TestHandlerServesStaticHelloAndTicks(t *testing.T) {
 	static := fstest.MapFS{"index.html": {Data: []byte("<title>CyberCity-3D</title>")}}
-	hub := NewHub()
+	hub := NewHub(protocol.ExampleHello)
 	srv := httptest.NewServer(Handler(hub, static))
 	defer srv.Close()
 
@@ -33,20 +36,25 @@ func TestHandlerServesStaticAndBroadcasts(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = conn.Close() }()
+	_ = conn.SetReadDeadline(time.Now().Add(2 * time.Second))
 
-	// The client registers asynchronously after the upgrade; retry until it receives.
-	deadline := time.Now().Add(2 * time.Second)
-	for {
-		hub.Broadcast([]byte(`[]`))
-		_ = conn.SetReadDeadline(time.Now().Add(50 * time.Millisecond))
-		if _, msg, err := conn.ReadMessage(); err == nil {
-			if string(msg) != "[]" {
-				t.Fatalf("got %q", msg)
-			}
-			return
+	var first struct{ Type string }
+	if _, msg, err := conn.ReadMessage(); err != nil || json.Unmarshal(msg, &first) != nil || first.Type != "hello" {
+		t.Fatalf("first message %q (%v), want hello", msg, err)
+	}
+
+	// The client is registered before hello is written, so ticks reach it.
+	for want := uint64(1); want <= 2; want++ {
+		if err := hub.Tick(protocol.ExampleTick()); err != nil {
+			t.Fatal(err)
 		}
-		if time.Now().After(deadline) {
-			t.Fatal("no broadcast received")
+		_, msg, err := conn.ReadMessage()
+		if err != nil {
+			t.Fatal(err)
+		}
+		var tick protocol.Tick
+		if err := json.Unmarshal(msg, &tick); err != nil || tick.Seq != want {
+			t.Fatalf("tick seq %d (%v), want %d", tick.Seq, err, want)
 		}
 	}
 }
