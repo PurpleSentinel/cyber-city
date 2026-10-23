@@ -149,7 +149,7 @@ Split into two PRs (AGENTS.md size rule):
   - A unit test covers user lookup and the error paths.
   - The live-smoke CI job (T1.8) asserts that the process uid ≠ 0 after startup when launched with sudo.
 
-### [ ] T1.7 Privacy controls
+### [x] T1.7 Privacy controls
 - **Depends:** T0.8. **Touches:** `internal/pipeline`, `internal/capture`, `internal/protocol`.
 - **Do:** snaplen 256 default; `--show-mac`; `--anonymize` (HMAC ids, `ip: null`, anonymous districts, test hook for a fixed key).
 - **Done when:** golden `web_https --anonymize` contains no `10.0.1.` or `203.0.113.` substrings anywhere, and `--show-mac` toggles `mac` fields in golden output.
@@ -217,7 +217,7 @@ Split into two PRs (AGENTS.md size rule):
 ### [ ] T2.9 MAC, vendor and gateway detection
 - **Depends:** T0.6, T2.5. **Touches:** `internal/enrich/mac.go`.
 - **Do:** attribute MACs and vendors per D13, detect gateways, gate `mac` behind `--show-mac`.
-- **Done when:** the `gateway` and `web_https` vendor assertions in T pass.
+- **Done when:** the `gateway` and `web_https` vendor assertions in T pass, and `--show-mac` toggles `mac` fields in golden output (moved here from T1.7: MACs are first attributed in this task).
 
 ### [ ] T2.10 Device class
 - **Depends:** T2.6, T2.9. **Touches:** `internal/enrich/class.go`.

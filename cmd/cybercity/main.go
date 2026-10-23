@@ -60,7 +60,6 @@ func notYet(cfg config.Config) error {
 		{cfg.BPF != "", "--bpf", "T2.2"},
 		{cfg.Districts != "", "--districts", "T2.11"},
 		{cfg.GeoIP != "", "--geoip", "T2.12"},
-		{cfg.Anonymize, "--anonymize", "T1.7"},
 	}
 	for _, p := range pending {
 		if p.set {
@@ -82,6 +81,7 @@ func run(ctx context.Context, cfg config.Config) error {
 		Heartbeat:  cfg.Server.Heartbeat.D(),
 		MaxTracked: cfg.Flows.MaxTracked,
 		Server:     info,
+		Anonymize:  cfg.Anonymize,
 	})
 
 	if cfg.DumpJSON != "" {

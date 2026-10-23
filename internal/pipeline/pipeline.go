@@ -17,6 +17,10 @@ type Options struct {
 	MaxTracked int
 	// Server describes the sensor in hello messages.
 	Server protocol.ServerInfo
+	// Anonymize pseudonymises host ids and hides addresses (--anonymize).
+	Anonymize bool
+	// AnonKey fixes the pseudonym key (tests); nil means a random per-run key.
+	AnonKey []byte
 }
 
 type flowKey struct {
@@ -37,6 +41,7 @@ type flowAgg struct {
 // must be called from one goroutine; Snapshot may be called concurrently.
 type Pipeline struct {
 	opts    Options
+	id      *identity
 	dec     *Decoder
 	tracker *ServerTracker
 
@@ -60,6 +65,7 @@ type Pipeline struct {
 func New(opts Options) *Pipeline {
 	return &Pipeline{
 		opts:      opts,
+		id:        newIdentity(opts.Anonymize, opts.AnonKey),
 		dec:       NewDecoder(),
 		tracker:   NewServerTracker(opts.MaxTracked),
 		flows:     make(map[flowKey]*flowAgg),
@@ -122,9 +128,9 @@ func (p *Pipeline) touch(a netip.Addr, ts time.Time) {
 	if h == nil {
 		h = &hostState{addr: a, local: IsLocal(a), firstSeen: ts, dirty: true}
 		if h.local {
-			d := autoDistrict(a)
+			d, isNew := p.id.district(a)
 			h.district = d.ID
-			if _, ok := p.districts[d.ID]; !ok {
+			if isNew {
 				p.districts[d.ID] = d
 				p.newDist = append(p.newDist, d)
 			}
@@ -182,7 +188,7 @@ func (p *Pipeline) tick(end time.Time) *protocol.Tick {
 	}
 	for k, f := range p.flows {
 		wf := protocol.Flow{
-			Src: k.src.String(), Dst: k.dst.String(), Proto: k.proto.String(),
+			Src: p.id.hostID(k.src), Dst: p.id.hostID(k.dst), Proto: k.proto.String(),
 			Category: Category(k.proto, nil), Packets: f.packets, Bytes: f.bytes,
 			TCPFlags: FlagNames(f.flags),
 		}
@@ -204,7 +210,7 @@ func (p *Pipeline) tick(end time.Time) *protocol.Tick {
 	t.Districts, p.newDist = p.newDist, nil
 	for _, h := range p.hosts {
 		if h.dirty {
-			t.Hosts = append(t.Hosts, h.wire())
+			t.Hosts = append(t.Hosts, h.wire(p.id))
 			h.dirty, h.sentSeen = false, h.lastSeen
 		}
 	}
@@ -223,11 +229,12 @@ func (p *Pipeline) Snapshot() *protocol.Hello {
 		Hosts:     make([]protocol.Host, 0, len(p.hosts)),
 	}
 	h.Server.WindowMS = int(p.opts.Window / time.Millisecond)
+	h.Server.Anonymized = p.opts.Anonymize
 	for _, d := range p.districts {
 		h.Districts = append(h.Districts, d)
 	}
 	for _, hs := range p.hosts {
-		h.Hosts = append(h.Hosts, hs.wire())
+		h.Hosts = append(h.Hosts, hs.wire(p.id))
 	}
 	protocol.SortHello(h)
 	return h

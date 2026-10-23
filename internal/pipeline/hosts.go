@@ -23,10 +23,10 @@ type hostState struct {
 	dirty     bool      // new or changed since the last tick
 }
 
-func (h *hostState) wire() protocol.Host {
+func (h *hostState) wire(id *identity) protocol.Host {
 	return protocol.Host{
-		ID:          h.addr.String(),
-		IP:          protocol.Ptr(h.addr.String()),
+		ID:          id.hostID(h.addr),
+		IP:          id.hostIP(h.addr),
 		Local:       h.local,
 		District:    h.district,
 		DeviceClass: protocol.ClassUnknown,
