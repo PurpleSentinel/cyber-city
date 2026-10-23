@@ -125,7 +125,7 @@ Split into two PRs (AGENTS.md size rule):
   - `make dev` runs the backend (`--read demo.pcap --loop --allow-origin http://localhost:5173`) and `vite` together.
 - **Done when:** the T `/ws` Origin rows pass and `make dev` serves a working page at the printed dev URL.
 
-### [ ] T1.4 Static serving and security headers
+### [x] T1.4 Static serving and security headers
 - **Depends:** T1.2. **Touches:** `internal/server/static.go`, `web/index.html`, `web/src/ui/styles.css`.
 - **Do:** serve the embedded `dist` with the P headers. Move all inline styles and scripts out of `index.html`.
 - **Done when:** the T header row passes, and the built page loads with no CSP violations in the browser console (checked in e2e once T3.12 lands; until then, manual and described in the PR).

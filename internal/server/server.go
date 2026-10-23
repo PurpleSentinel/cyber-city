@@ -97,6 +97,6 @@ func Handler(h *Hub, static fs.FS, auth *Auth) http.Handler {
 	mux.HandleFunc("GET /auth", auth.HandleAuth)
 	mux.HandleFunc("GET /api/session", auth.HandleSession)
 	mux.Handle("/ws", auth.Require(http.HandlerFunc(h.ServeWS)))
-	mux.Handle("/", http.FileServerFS(static))
-	return mux
+	mux.Handle("/", staticHandler(static))
+	return securityHeaders(mux)
 }
