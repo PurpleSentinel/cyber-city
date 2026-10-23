@@ -22,7 +22,9 @@ kill "$pid"
 wait "$pid" 2>/dev/null || true
 
 # docs/SETUP.md "Choosing what to capture".
-bin/cybercity --list-ifaces | grep -q '^ *lo ' || { echo "FAIL: lo not listed"; exit 1; }
+# Via a file: under pipefail, `| grep -q` can kill the writer with SIGPIPE.
+bin/cybercity --list-ifaces >"$dir/ifaces"
+grep -q '^ *lo ' "$dir/ifaces" || { echo "FAIL: lo not listed"; cat "$dir/ifaces"; exit 1; }
 rm -f "$dir/url"
 bin/cybercity --iface lo --bpf "tcp or udp" --no-promisc --listen 127.0.0.1:0 --url-file "$dir/url" >"$dir/log2" 2>&1 &
 pid=$!
