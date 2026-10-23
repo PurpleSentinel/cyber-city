@@ -8,6 +8,7 @@ import { CATEGORIES } from "../protocol";
 import type { RateState } from "../state/rate";
 import { addSample, decayedRate, newRate, stepHeight, targetHeight } from "../state/rate";
 import { degradedLevel, sampleEffect } from "../state/status";
+import { Outage } from "./effects/outage";
 import { buildingDepthMaterial, buildingMaterial } from "./materials";
 
 interface Building {
@@ -22,6 +23,7 @@ interface Building {
   removing: number | null; // seconds into the fade-out, or null
   local: boolean;
   flash: number; // spike flash 1 → 0 over STATUS.flashS
+  outage: Outage | null; // host_idle power outage, freed when it completes
 }
 
 /** Category bitmask of a host's services, bit order as in CONFIG.md. */
@@ -78,13 +80,21 @@ export class Buildings {
   }
 
   add(h: Host, at: Point, onPlot: boolean): void {
-    if (this.byId.has(h.id)) return;
+    const existing = this.byId.get(h.id);
+    if (existing) {
+      // Back before its fade-out or outage finished: keep the building.
+      existing.removing = null;
+      existing.outage = null;
+      this.state.setZ(existing.index, 0);
+      this.update(h);
+      return;
+    }
     const index = this.free.pop() ?? (this.mesh.count < this.mesh.instanceMatrix.count ? this.mesh.count++ : -1);
     if (index < 0) return;
     const b: Building = {
       id: h.id, index, x: at.x, z: at.z,
       base: onPlot ? MATERIALS.plot.height : 0,
-      height: 1, rate: newRate(), fadeIn: 0, removing: null, local: h.local, flash: 0,
+      height: 1, rate: newRate(), fadeIn: 0, removing: null, local: h.local, flash: 0, outage: null,
     };
     this.byId.set(h.id, b);
     this.idByIndex[index] = h.id;
@@ -109,10 +119,22 @@ export class Buildings {
     if (b && b.removing === null) b.removing = 0;
   }
 
+  /** Starts the power-outage effect; the slot is freed when it completes. */
+  outage(id: string, random?: () => number): void {
+    const b = this.byId.get(id);
+    if (b && b.removing === null && b.outage === null) b.outage = new Outage(random);
+  }
+
+  /** Free instance slots (for tests). */
+  get freeSlots(): number {
+    return this.free.length;
+  }
+
   /** Host id drawn by an instance (for raycast picking). */
   idAt(index: number): string | null {
     const id = this.idByIndex[index];
-    return id !== undefined && this.byId.get(id)?.removing === null ? id : null;
+    const b = id === undefined ? undefined : this.byId.get(id);
+    return b && b.removing === null && b.outage === null ? (id ?? null) : null;
   }
 
   clear(): void {
@@ -152,7 +174,15 @@ export class Buildings {
       b.height = stepHeight(b.height, target, dt);
       b.fadeIn = Math.min(1, b.fadeIn + dt / STATUS.fadeInS);
       let scaleY = b.height * b.fadeIn;
-      if (b.removing !== null) {
+      if (b.outage) {
+        const o = b.outage.step(dt);
+        if (o.done) {
+          freed.push(b.id);
+          continue;
+        }
+        scaleY *= o.scaleY;
+        this.state.setZ(b.index, o.windowsOff ? -1 : o.dissolve);
+      } else if (b.removing !== null) {
         b.removing += dt;
         scaleY *= Math.max(0, 1 - b.removing / STATUS.fadeOutS);
         if (b.removing >= STATUS.fadeOutS) {

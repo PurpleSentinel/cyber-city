@@ -18,7 +18,7 @@ float ccHash(vec3 p) {
 const VERTEX_DECL = /* glsl */ `
 attribute vec3 aColor;
 attribute float aServices;
-attribute vec4 aState; // x degraded, y flash, z dissolve, w fade-in
+attribute vec4 aState; // x degraded, y flash, z dissolve (< 0: windows off), w fade-in
 varying vec3 vCCColor;
 varying float vCCServices;
 varying vec4 vCCState;
@@ -114,7 +114,8 @@ export function buildingMaterial(): THREE.MeshStandardMaterial {
             float jitter = vCCState.x * 0.15 * sin(uCCTime * 23.0 + vCCLocal.y * 40.0);
             float yM = vCCLocal.y * vCCHeight + jitter; // metres up the facade
             totalEmissiveRadiance += ccClass * vCCState.x * 0.3 * step(0.5, fract(yM * 8.0 + uCCTime * 3.0));
-            float inWindow = step(abs(fract(colF) - 0.5), 0.375) * step(0.25, fract(yM)) * step(fract(yM), 0.75);
+            // Power outage flicker: aState.z < 0 switches the windows off.
+            float inWindow = step(abs(fract(colF) - 0.5), 0.375) * step(0.25, fract(yM)) * step(fract(yM), 0.75) * step(0.0, vCCState.z);
             int services = int(vCCServices + 0.5);
             int count = 0;
             for (int i = 0; i < 8; i++) count += (services >> i) & 1;
@@ -144,7 +145,7 @@ export function buildingMaterial(): THREE.MeshStandardMaterial {
         }`,
       );
   };
-  mat.customProgramCacheKey = () => "cybercity-building-v2";
+  mat.customProgramCacheKey = () => "cybercity-building-v3";
   return mat;
 }
 

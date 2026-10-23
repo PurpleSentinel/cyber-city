@@ -207,9 +207,10 @@ store.subscribe({
       meteors.start(e.dst, qualityCtl.mode === "low");
     }
   },
-  hostRemoved(id) {
+  hostRemoved(id, viaEvent) {
     if (inspector.selected === id) inspector.clear();
-    buildings.remove(id);
+    if (viaEvent) buildings.outage(id);
+    else buildings.remove(id);
     highwayModel.removeHost(id);
   },
   tick(t) {
