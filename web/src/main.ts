@@ -10,9 +10,11 @@ import { INVALID_LINK_MESSAGE } from "./net/session";
 import type { Host } from "./protocol";
 import { Buildings } from "./render/buildings";
 import { Lightning } from "./render/effects/lightning";
+import { Highways } from "./render/highways";
 import { poseFor, probe } from "./render/probe";
 import { rendererInfo } from "./render/rendererInfo";
 import { Plots, addLights, configureRenderer, createGround, setEnvironment } from "./render/scene";
+import { HighwayModel } from "./state/highways";
 import { bytesByHost } from "./state/rate";
 import { Store } from "./state/store";
 import "./ui/styles.css";
@@ -54,6 +56,14 @@ const buildings = new Buildings();
 scene.add(buildings.mesh);
 const lightning = new Lightning();
 scene.add(lightning.group);
+const highwayModel = new HighwayModel();
+const highways = new Highways();
+scene.add(highways.mesh);
+
+function endpoint(id: string) {
+  const g = buildings.geometry(id);
+  return g ? { point: { x: g.x, z: g.z }, local: g.local } : null;
+}
 const layout = new Layout();
 
 // ---- State → city -------------------------------------------------------------
@@ -72,6 +82,7 @@ function place(h: Host): void {
 store.subscribe({
   reset() {
     buildings.clear();
+    highwayModel.clear();
     layout.reset();
     plots.update([]);
     firstTickTs = 0;
@@ -80,10 +91,13 @@ store.subscribe({
   hostUpdated: (h) => buildings.update(h),
   hostRemoved(id) {
     buildings.remove(id);
+    highwayModel.removeHost(id);
   },
   tick(t) {
     if (firstTickTs === 0) firstTickTs = t.ts;
     lastTickTs = t.ts;
+    highwayModel.applyTick(t.flows, t.window_ms, t.ts, (id) => buildings.has(id));
+    highways.update(highwayModel.roads(t.ts), endpoint);
     for (const id of buildings.applyBytes(bytesByHost(t.flows), t.window_ms, t.ts)) {
       const g = buildings.geometry(id);
       if (g) lightning.strike(g.x, g.z, g.base + g.height);
@@ -158,7 +172,7 @@ const debug = debugEnabled()
   ? installDebug({
       stats: () => ({
         buildings: buildings.size,
-        highways: 0,
+        highways: highways.roadCount,
         particles: 0,
         ticks: store.ticks,
         events: store.events.length,

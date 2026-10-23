@@ -297,7 +297,7 @@ Split into two PRs (AGENTS.md size rule):
 - **Do:** degraded noise, spike flash, lightning, with triggers per V.
 - **Done when:** Vitest covers the trigger functions (degraded formula, spike and lightning thresholds).
 
-### [ ] T3.7 Highways
+### [x] T3.7 Highways
 - **Depends:** T3.4. **Touches:** `web/src/render/highways.ts`.
 - **Do:** pair aggregation, routing, width, dominant colour, fade, the 500 cap (V).
 - **Done when:** Vitest covers the L-route geometry, width formula, cap selection and fade timing.
