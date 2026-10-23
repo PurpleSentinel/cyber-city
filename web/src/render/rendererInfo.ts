@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import { HUD } from "../config";
 
 export interface RendererInfo {

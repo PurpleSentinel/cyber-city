@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 // Highway rendering (docs/VISUAL_SPEC.md "Highways"): instanced flat quads,
 // additive, one or two segments per road.
 import * as THREE from "three";

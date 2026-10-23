@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 // Session check before opening the WebSocket (docs/PROTOCOL.md "Client behaviour").
 
 export type SessionState = "valid" | "invalid" | "unreachable";

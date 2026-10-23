@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 // Package config holds runtime settings: built-in defaults, an optional YAML
 // file and command-line flags, in that order of precedence (docs/CONFIG.md).
 package config

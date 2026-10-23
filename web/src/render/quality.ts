@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 // Quality modes (docs/VISUAL_SPEC.md "Scene and camera", key L): high has
 // bloom and shadows; low drops bloom and shadows, halves particles and uses
 // pixel ratio 1. Materials stay lit in both (D17).

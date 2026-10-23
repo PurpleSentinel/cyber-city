@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { ALL_SHAPES, asCategory, isHello, isTick, parseMessage } from "../src/protocol";

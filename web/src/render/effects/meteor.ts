@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 // Meteor shower for flood events (docs/VISUAL_SPEC.md "Event effects"): the
 // sky turns alert red, particles fall onto the target, and a wireframe shield
 // flickers around it.

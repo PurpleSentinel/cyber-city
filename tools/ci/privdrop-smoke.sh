@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
 # CI smoke test (T1.8): start the binary as root for live capture and check it
 # drops root once the capture is open (docs/CONFIG.md "Startup order").
 # Usage: tools/ci/privdrop-smoke.sh path/to/cybercity

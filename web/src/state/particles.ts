@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 // Particle freight model (docs/VISUAL_SPEC.md "Particle freight"). Pure: the
 // renderer reads positions from here.
 import { PARTICLES } from "../config";

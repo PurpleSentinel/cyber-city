@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 // Package protocol defines the v1 wire messages exchanged with the browser.
 // It mirrors docs/PROTOCOL.md and web/src/protocol.ts; change all three together.
 package protocol

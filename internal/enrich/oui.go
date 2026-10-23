@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 // Package enrich derives per-host and per-flow facts from passive observation.
 package enrich
 

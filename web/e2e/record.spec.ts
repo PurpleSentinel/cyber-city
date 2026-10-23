@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 // docs/TASKS.md T5.3: records the README clip from the demo replay. The video
 // lands in e2e/artifacts/demo.webm with demo.json noting when the scan fired;
 // `make media` cuts docs/media/demo.gif around it.

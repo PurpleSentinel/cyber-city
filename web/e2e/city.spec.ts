@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 // docs/TESTING.md "End-to-end" steps 2–5: the city comes alive from the demo
 // replay, under software rendering, with no CSP violations or errors.
 import { expect, test } from "@playwright/test";

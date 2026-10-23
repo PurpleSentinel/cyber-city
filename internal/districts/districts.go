@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 // Package districts assigns local hosts to configured districts
 // (docs/CONFIG.md "Districts file").
 package districts

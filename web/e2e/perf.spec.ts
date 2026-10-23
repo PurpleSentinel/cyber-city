@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 // docs/TASKS.md T5.4: frame time with about 2000 hosts. Starts its own server
 // on testdata/pcap/many_hosts.pcap and records the numbers in
 // e2e/artifacts/perf.json for tools/perfcheck. It asserts only that the city

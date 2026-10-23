@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 // Building materials (docs/VISUAL_SPEC.md "Lighting, materials and shading").
 // One lit MeshStandardMaterial extended through onBeforeCompile: never a
 // ShaderMaterial, which would lose three.js lighting and shadows (D17).

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 // Event log (docs/VISUAL_SPEC.md "HUD and interaction"): the last 50 events,
 // newest first. Formatting is pure; EventLog only writes DOM text.
 import { HUD } from "../config";

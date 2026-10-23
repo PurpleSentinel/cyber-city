@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 // Package privdrop gives up root after the capture handle and listener are
 // open (docs/CONFIG.md "Startup order", DECISIONS D22).
 package privdrop

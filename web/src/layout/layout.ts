@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 // Deterministic city layout (docs/VISUAL_SPEC.md "Layout"). No three.js here:
 // pure geometry, tested by Vitest.
 //

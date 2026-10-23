@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
 # CI check (docs/TASKS.md T5.3): runs the README's no-root commands against a
 # built bin/cybercity. `make setup` and `make build` run in the e2e job before
 # this; the live quick start runs in the live-smoke job (live-quickstart.sh).

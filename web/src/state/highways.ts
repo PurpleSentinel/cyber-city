@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 // Highway model (docs/VISUAL_SPEC.md "Highways"): one road per host pair with
 // recent traffic, width from the pair's rate, colour from its dominant
 // category, fading out after the last packet. Pure: no three.js.

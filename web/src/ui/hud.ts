@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 // HUD (docs/VISUAL_SPEC.md "HUD and interaction"). Formatting and averaging
 // are pure; the Hud class only writes text into existing elements.
 import type { Stats } from "../protocol";

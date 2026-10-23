@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 // Instanced buildings (docs/VISUAL_SPEC.md "Buildings"): one InstancedMesh of
 // lit dark-glass boxes, heights from the rate model, fade in/out.
 import * as THREE from "three";

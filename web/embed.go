@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 // Package web embeds the built frontend so the binary serves the page and the
 // WebSocket from one origin (docs/DECISIONS.md D3).
 package web

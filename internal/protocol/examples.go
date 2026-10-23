@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 package protocol
 
 // Canonical example messages. They are written to testdata/protocol/*.json by

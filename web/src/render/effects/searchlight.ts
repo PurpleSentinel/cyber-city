@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 // Searchlight for port_scan events (docs/VISUAL_SPEC.md "Event effects"): an
 // additive cone from the scanner's roof that aims at each target in turn,
 // while the targets carry an alert outline.

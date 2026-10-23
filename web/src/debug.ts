@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 // Read-only test hook (docs/VISUAL_SPEC.md "Debug hook"), installed only with
 // ?debug=1. It never offers a way to change state.
 

@@ -375,7 +375,7 @@ Split into two PRs (AGENTS.md size rule):
 
 ## Milestone 5: Credibility and release
 
-### [ ] T5.1 👤 Licence
+### [x] T5.1 👤 Licence
 The owner picks a licence (MIT or Apache-2.0 suggested). An agent then adds `LICENSE` and SPDX headers to source files.
 
 ### [x] T5.2 Release pipeline

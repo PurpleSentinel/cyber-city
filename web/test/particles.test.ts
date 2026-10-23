@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import { describe, expect, it } from "vitest";
 import { ParticleSystem, along, emissionRate, travelTime } from "../src/state/particles";
 

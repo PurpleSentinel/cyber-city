@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import { describe, expect, it } from "vitest";
 import type { DebugSources } from "../src/debug";
 import { debugEnabled, installDebug } from "../src/debug";

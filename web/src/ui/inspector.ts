@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 // Inspector panel and hover tooltip (docs/VISUAL_SPEC.md "HUD and
 // interaction"). Rows are built by a pure function; DOM writes use textContent.
 import type { Host } from "../protocol";

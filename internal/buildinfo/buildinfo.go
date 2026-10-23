@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 // Package buildinfo carries build-time metadata such as the release version.
 package buildinfo
 
