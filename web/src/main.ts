@@ -1,22 +1,26 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
-import { CAMERA, DEVICE_COLORS, LIGHTING, MAX_BUILDINGS, MATERIALS, PALETTE, SCENE } from "./config";
-import { Layout } from "./layout/layout";
+import { CAMERA, LIGHTING, PALETTE, SCENE } from "./config";
 import { debugEnabled, installDebug } from "./debug";
+import { Layout } from "./layout/layout";
 import type { ConnectionState } from "./net/connection";
 import { Connection, defaultDeps } from "./net/connection";
 import { INVALID_LINK_MESSAGE } from "./net/session";
+import type { Host } from "./protocol";
+import { Buildings } from "./render/buildings";
+import { poseFor, probe } from "./render/probe";
 import { rendererInfo } from "./render/rendererInfo";
 import { Plots, addLights, configureRenderer, createGround, setEnvironment } from "./render/scene";
+import { bytesByHost } from "./state/rate";
 import { Store } from "./state/store";
 import "./ui/styles.css";
 
-// App wiring. Lighting, ground and plots follow docs/VISUAL_SPEC.md (T3.3a);
-// buildings are simple lit boxes until the dark-glass material lands in T3.4.
+// App wiring: the shaded city of docs/VISUAL_SPEC.md.
 
 const params = new URLSearchParams(window.location.search);
 
+// ---- Renderer, scene, camera ------------------------------------------------
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
 const gpu = rendererInfo(renderer.getContext());
 const forced = params.get("quality");
@@ -45,73 +49,77 @@ pmrem.dispose();
 scene.add(createGround());
 const plots = new Plots();
 scene.add(plots.mesh);
+const buildings = new Buildings();
+scene.add(buildings.mesh);
 const layout = new Layout();
 
-// ---- Interim buildings (lit boxes; replaced by the T3.4 material) ---------
-const geometry = new THREE.BoxGeometry(2, 1, 2);
-geometry.translate(0, 0.5, 0);
-const buildingMesh = new THREE.InstancedMesh(
-  geometry,
-  new THREE.MeshStandardMaterial({ roughness: MATERIALS.building.roughness, metalness: MATERIALS.building.metalness }),
-  MAX_BUILDINGS,
-);
-buildingMesh.castShadow = true;
-buildingMesh.receiveShadow = true;
-buildingMesh.count = 0;
-scene.add(buildingMesh);
-const tint = new THREE.Color();
-
-interface Building {
-  index: number;
-  x: number;
-  z: number;
-  height: number;
-  target: number;
-}
-const buildings = new Map<string, Building>();
-const free: number[] = [];
-const dummy = new THREE.Object3D();
-
+// ---- State → city -------------------------------------------------------------
 const store = new Store();
+let firstTickTs = 0;
+let lastTickTs = 0;
+
+function place(h: Host): void {
+  const kind = store.districts.get(h.district)?.kind ?? (h.local ? "lan" : "outlands");
+  const p = layout.place(h.id, h.district, kind, h.geo?.sector ?? null);
+  if (!p) return;
+  plots.update(layout.blocks());
+  buildings.add(h, p, kind !== "outlands");
+}
+
 store.subscribe({
   reset() {
     buildings.clear();
-    free.length = 0;
-    buildingMesh.count = 0;
     layout.reset();
     plots.update([]);
+    firstTickTs = 0;
   },
-  hostAdded(h) {
-    if (buildings.size >= MAX_BUILDINGS) return;
-    const kind = store.districts.get(h.district)?.kind ?? (h.local ? "lan" : "outlands");
-    const p = layout.place(h.id, h.district, kind, h.geo?.sector ?? null);
-    if (!p) return;
-    plots.update(layout.blocks());
-    const index = free.pop() ?? buildingMesh.count++;
-    buildingMesh.setColorAt(index, tint.set(DEVICE_COLORS[h.device_class] ?? PALETTE.hud).multiplyScalar(0.35));
-    if (buildingMesh.instanceColor) buildingMesh.instanceColor.needsUpdate = true;
-    buildings.set(h.id, { index, x: p.x, z: p.z, height: 1, target: 1 });
-  },
+  hostAdded: place,
+  hostUpdated: (h) => buildings.update(h),
   hostRemoved(id) {
-    const b = buildings.get(id);
-    if (!b) return;
-    layout.release(id);
-    buildings.delete(id);
-    dummy.scale.set(0, 0, 0);
-    dummy.updateMatrix();
-    buildingMesh.setMatrixAt(b.index, dummy.matrix);
-    free.push(b.index);
+    buildings.remove(id);
   },
   tick(t) {
-    for (const flow of t.flows) {
-      // Flows to multicast/broadcast groups name no host (docs/DECISIONS.md D21).
-      for (const id of [flow.src, flow.dst]) {
-        const b = buildings.get(id);
-        if (b) b.target = Math.min(60, b.target + flow.bytes / 5000);
-      }
-    }
+    if (firstTickTs === 0) firstTickTs = t.ts;
+    lastTickTs = t.ts;
+    buildings.applyBytes(bytesByHost(t.flows), t.window_ms, t.ts);
   },
 });
+
+// ---- Fixed camera poses for tests (?pose=auto | host:<id>) -------------------
+const poseParam = params.get("pose");
+let poseHost: string | null = poseParam?.startsWith("host:") ? poseParam.slice(5) : null;
+
+function blockCentres() {
+  return layout.blocks().map((b) => b.centre);
+}
+
+function choosePoseHost(): string | null {
+  if (lastTickTs - firstTickTs < 10_000) return null; // 10 s of tick time
+  let best: string | null = null;
+  let bestRate = -1;
+  for (const id of buildings.ids()) {
+    const g = buildings.geometry(id);
+    if (!g || !g.local || g.height < 10) continue;
+    const pr = probe(g, camera, window.innerWidth, window.innerHeight, blockCentres());
+    const rate = buildings.rateOf(id);
+    if (pr.sameSurface && rate > bestRate) {
+      best = id;
+      bestRate = rate;
+    }
+  }
+  return best;
+}
+
+function applyPose(): void {
+  if (poseParam === "auto" && !poseHost) poseHost = choosePoseHost();
+  if (!poseHost) return;
+  const g = buildings.geometry(poseHost);
+  if (!g) return;
+  const { position, target } = poseFor(g);
+  camera.position.copy(position);
+  controls.target.copy(target);
+  controls.enabled = false;
+}
 
 // ---- HUD -------------------------------------------------------------------
 const statusDiv = document.getElementById("status");
@@ -151,14 +159,17 @@ const debug = debugEnabled()
         renderer: gpu.name,
         software: gpu.software,
         quality,
-        lit: true,
-        wireframe: false,
-        shadows: renderer.shadowMap.enabled,
+        lit: buildings.mesh.material instanceof THREE.MeshStandardMaterial,
+        wireframe: (buildings.mesh.material as THREE.MeshStandardMaterial).wireframe,
+        shadows: renderer.shadowMap.enabled && buildings.mesh.castShadow,
       }),
-      hostIds: () => [...buildings.keys()],
+      hostIds: () => buildings.ids(),
       lastEvents: () => store.events.map((e) => ({ id: e.id, kind: e.kind })),
-      probe: () => null,
-      poseHost: () => null,
+      probe: (id) => {
+        const g = buildings.geometry(id);
+        return g ? probe(g, camera, window.innerWidth, window.innerHeight, blockCentres()) : null;
+      },
+      poseHost: () => poseHost,
     })
   : null;
 
@@ -173,21 +184,18 @@ const connection = new Connection(
 void connection.start();
 
 // ---- Frame loop ----------------------------------------------------------------
-let firstFrame = true;
-function animate(): void {
+const timer = new THREE.Timer();
+let rendered = false;
+function animate(now?: number): void {
   requestAnimationFrame(animate);
+  timer.update(now);
+  const dt = Math.min(timer.getDelta(), 0.1);
+  buildings.frame(dt);
+  applyPose();
   controls.update();
-  for (const b of buildings.values()) {
-    b.height = THREE.MathUtils.lerp(b.height, b.target, 0.05);
-    dummy.position.set(b.x, MATERIALS.plot.height, b.z);
-    dummy.scale.set(1, b.height, 1);
-    dummy.updateMatrix();
-    buildingMesh.setMatrixAt(b.index, dummy.matrix);
-  }
-  buildingMesh.instanceMatrix.needsUpdate = true;
   renderer.render(scene, camera);
-  if (firstFrame && store.server) {
-    firstFrame = false;
+  if (!rendered && store.server) {
+    rendered = true;
     debug?.markReady();
   }
 }
