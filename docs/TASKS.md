@@ -383,7 +383,7 @@ The owner picks a licence (MIT or Apache-2.0 suggested). An agent then adds `LIC
 - **Do:** on tag `v*`, build Linux amd64 and arm64 on native runners (cgo + libpcap), with checksums and SBOM, and attach to a GitHub Release.
 - **Done when:** a dry run (`goreleaser release --snapshot --clean`) passes in CI. 👤 The owner pushes the first tag.
 
-### [ ] T5.3 README rewrite
+### [x] T5.3 README rewrite
 - **Depends:** T3.12, T4.8. **Touches:** `README.md`, `docs/media/`.
 - **Do:**
   - Recording: a GIF or WebM from the e2e run against `demo.pcap`.

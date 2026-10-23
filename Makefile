@@ -77,6 +77,11 @@ demo: build ## Run bin/cybercity on the demo capture
 setcap: ## Grant capture capabilities to bin/cybercity (live capture without root)
 	sudo setcap cap_net_raw,cap_net_admin+eip $(BIN)
 
+.PHONY: media
+media: build ## Re-record docs/media/demo.gif from the demo replay (needs ffmpeg)
+	cd $(WEB) && npx playwright test e2e/record.spec.ts
+	tools/media/demo-gif.sh
+
 .PHONY: clean
 clean: ## Remove build output
 	rm -rf bin $(WEB)/dist/assets $(WEB)/dist/index.html
