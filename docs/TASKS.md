@@ -181,12 +181,12 @@ Split into two PRs (AGENTS.md size rule):
 - **Do:** `--bpf` for live capture (`SetBPFFilter`) and file replay (`pcap.NewBPF`, plus a clear error when libpcap is unavailable). An invalid expression fails at startup.
 - **Done when:** a golden-style test of `--read dns.pcap --bpf "tcp"` yields zero flows.
 
-### [ ] T2.3 IPv6, ICMP and VLAN decoding
+### [x] T2.3 IPv6, ICMP and VLAN decoding
 - **Depends:** T0.8. **Touches:** `internal/pipeline/decode.go`.
 - **Do:** use `DecodingLayerParser` for Ethernet, Dot1Q, IPv4, IPv6, TCP, UDP, ICMPv4 and ICMPv6, and keep the VLAN id on the packet record. Local-address rule from C.
-- **Done when:** the `ipv6` and `vlan` fixture assertions in T pass; decode benchmark ≥ 1M packets/s on CI hardware (`go test -bench`).
+- **Done when:** the `ipv6` fixture assertions in T pass (the `vlan` district assertion needs the districts file and is checked in T2.11); decode benchmark ≥ 1M packets/s on CI hardware (`go test -bench`).
 
-### [ ] T2.4 Flow keying and categories
+### [x] T2.4 Flow keying and categories
 - **Depends:** T2.3. **Touches:** `internal/pipeline/flow.go`.
 - **Do:** flow key, service-port rules, `server_side`, category table, TCP flag union, `flows.max_tracked` eviction (all from C).
 - **Done when:** table tests cover every service-port rule and every category row, and golden files are updated.
