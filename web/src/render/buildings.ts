@@ -120,7 +120,11 @@ export class Buildings {
   }
 
   /** Advances animation by dt seconds and writes instance data. */
-  frame(dt: number): string[] {
+  frame(dt: number, timeS = 0): string[] {
+    const shader = (this.mesh.material as THREE.Material).userData.shader as
+      | { uniforms: { uCCTime: { value: number } } }
+      | undefined;
+    if (shader) shader.uniforms.uCCTime.value = timeS;
     const freed: string[] = [];
     for (const b of this.byId.values()) {
       const target = targetHeight(decayedRate(b.rate, this.nowTs));

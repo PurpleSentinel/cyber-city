@@ -103,6 +103,35 @@ export function buildingMaterial(): THREE.MeshStandardMaterial {
           // Fresnel rim keeps the holographic feel on a solid body.
           float facing = max(dot(normal, normalize(vViewPosition)), 0.0);
           totalEmissiveRadiance += vCCColor * ${B.rimIntensity.toFixed(3)} * pow(1.0 - facing, ${B.rimPower.toFixed(1)});
+          // Facade windows (VISUAL_SPEC "Buildings"): 6 columns per side face,
+          // assigned to the set service-category bits in order, repeating.
+          if (!roof && abs(vCCObjNormal.y) < 0.5) {
+            float u = abs(vCCObjNormal.x) > 0.5 ? (vCCLocal.z + 1.0) * 0.5 : (vCCLocal.x + 1.0) * 0.5;
+            float colF = u * 6.0;
+            int col = int(min(floor(colF), 5.0));
+            float yM = vCCLocal.y * vCCHeight; // metres up the facade
+            float inWindow = step(abs(fract(colF) - 0.5), 0.375) * step(0.25, fract(yM)) * step(fract(yM), 0.75);
+            int services = int(vCCServices + 0.5);
+            int count = 0;
+            for (int i = 0; i < 8; i++) count += (services >> i) & 1;
+            if (count == 0) {
+              // No services: dim cyan on alternate floors.
+              float alt = 1.0 - mod(floor(yM), 2.0);
+              totalEmissiveRadiance += vec3(0.0, 0.94, 1.0) * 0.15 * inWindow * alt;
+            } else {
+              int want = col - (col / count) * count; // col mod count
+              int bit = 0;
+              int seen = 0;
+              for (int i = 0; i < 8; i++) {
+                if (((services >> i) & 1) == 1) {
+                  if (seen == want) bit = i;
+                  seen++;
+                }
+              }
+              float on = bit == 3 ? step(0.5, fract(uCCTime * 2.0)) : 1.0; // ssh blinks at 2 Hz
+              totalEmissiveRadiance += CC_CATEGORY[bit] * ${B.windowIntensity.toFixed(3)} * inWindow * on;
+            }
+          }
           // Spike flash: a white band rising from the ground (aState.y 1 → 0).
           if (vCCState.y > 0.0) {
             float band = 1.0 - vCCState.y;
