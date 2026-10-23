@@ -77,6 +77,39 @@ func TestFileLoopKeepsTimeIncreasing(t *testing.T) {
 	}
 }
 
+func TestFileBPFFilter(t *testing.T) {
+	cases := []struct {
+		expr string
+		want int
+	}{
+		{"tcp", 0},
+		{"udp port 53", 40},
+		{"src host 10.0.1.10", 20},
+	}
+	for _, tc := range cases {
+		s, err := OpenFile(fixture("dns"), false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := s.SetFilter(tc.expr); err != nil {
+			t.Fatal(err)
+		}
+		if n, _, _ := countFrames(t, s); n != tc.want {
+			t.Errorf("--bpf %q: %d frames, want %d", tc.expr, n, tc.want)
+		}
+		_ = s.Close()
+	}
+
+	s, err := OpenFile(fixture("dns"), false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = s.Close() }()
+	if err := s.SetFilter("tcp and and"); err == nil {
+		t.Fatal("invalid expression accepted")
+	}
+}
+
 func TestFileRejectsNonEthernet(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "bad.pcap")
 	// Classic pcap header with link type 101 (raw IP).

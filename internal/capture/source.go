@@ -9,6 +9,7 @@ import (
 
 	"github.com/gopacket/gopacket"
 	"github.com/gopacket/gopacket/layers"
+	"github.com/gopacket/gopacket/pcap"
 	"github.com/gopacket/gopacket/pcapgo"
 )
 
@@ -19,6 +20,8 @@ type Source interface {
 	Live() bool
 	// Stats returns cumulative kernel and interface drops (0 for files).
 	Stats() (kernelDrops, ifDrops uint64)
+	// SetFilter applies a BPF capture filter (docs/CONFIG.md --bpf).
+	SetFilter(expr string) error
 	Close() error
 }
 
@@ -35,6 +38,7 @@ type File struct {
 	offset time.Duration
 	first  time.Time
 	last   time.Time
+	filter *pcap.BPF
 }
 
 // OpenFile opens a pcap capture file with an Ethernet link type.
@@ -97,9 +101,22 @@ func (s *File) Next() ([]byte, gopacket.CaptureInfo, error) {
 			s.first = ci.Timestamp
 		}
 		s.last = ci.Timestamp
+		if s.filter != nil && !s.filter.Matches(ci, data) {
+			continue
+		}
 		ci.Timestamp = ci.Timestamp.Add(s.offset)
 		return data, ci, nil
 	}
+}
+
+// SetFilter compiles expr with libpcap and drops non-matching frames.
+func (s *File) SetFilter(expr string) error {
+	bpf, err := pcap.NewBPF(layers.LinkTypeEthernet, 65536, expr)
+	if err != nil {
+		return fmt.Errorf("--bpf %q: %w", expr, err)
+	}
+	s.filter = bpf
+	return nil
 }
 
 // Live is false: file timestamps are replayed, not observed.

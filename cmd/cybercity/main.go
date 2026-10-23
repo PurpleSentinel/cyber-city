@@ -64,7 +64,6 @@ func notYet(cfg config.Config) error {
 		flag string
 		task string
 	}{
-		{cfg.BPF != "", "--bpf", "T2.2"},
 		{cfg.Districts != "", "--districts", "T2.11"},
 		{cfg.GeoIP != "", "--geoip", "T2.12"},
 	}
@@ -82,6 +81,11 @@ func run(ctx context.Context, cfg config.Config) error {
 		return err
 	}
 	defer func() { _ = src.Close() }()
+	if cfg.BPF != "" {
+		if err := src.SetFilter(cfg.BPF); err != nil {
+			return err
+		}
+	}
 
 	p := pipeline.New(pipeline.Options{
 		Window:     cfg.Window.D(),

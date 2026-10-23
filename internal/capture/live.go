@@ -49,6 +49,14 @@ func (l *Live) Next() ([]byte, gopacket.CaptureInfo, error) {
 	}
 }
 
+// SetFilter installs a kernel BPF filter.
+func (l *Live) SetFilter(expr string) error {
+	if err := l.handle.SetBPFFilter(expr); err != nil {
+		return fmt.Errorf("--bpf %q: %w", expr, err)
+	}
+	return nil
+}
+
 // Live is true: timestamps track the wall clock.
 func (l *Live) Live() bool { return true }
 
