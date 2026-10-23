@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"io"
+	"net"
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
@@ -29,11 +30,61 @@ func newTestServer(t *testing.T) *testServer {
 	if err != nil {
 		t.Fatal(err)
 	}
-	hub := NewHub(protocol.ExampleHello)
 	static := fstest.MapFS{"index.html": {Data: []byte("<title>CyberCity-3D</title>")}}
-	srv := httptest.NewServer(Handler(hub, static, auth))
+	srv := httptest.NewUnstartedServer(nil)
+	// Allowed origins come from the real listener, as in cmd/cybercity.
+	hub := NewHub(protocol.ExampleHello, AllowedOrigins(srv.Listener.Addr(), []string{"http://localhost:5173"}))
+	srv.Config.Handler = Handler(hub, static, auth)
+	srv.Start()
 	t.Cleanup(srv.Close)
 	return &testServer{srv, hub, auth}
+}
+
+func TestWSOriginCheck(t *testing.T) {
+	s := newTestServer(t)
+	jar, _ := cookiejar.New(nil)
+	get(t, noRedirect(jar), s.auth.AuthURL(s.URL+"/"))
+	d := websocket.Dialer{Jar: jar}
+	cases := []struct {
+		origin string
+		ok     bool
+	}{
+		{s.URL, true},                    // the listener's own origin
+		{"http://localhost:5173", true},  // --allow-origin
+		{"", true},                       // non-browser client; cookie still required
+		{"http://evil.example", false},   // cross-site page
+		{"http://localhost:5174", false}, // wrong port
+		{"https://" + s.URL[7:], false},  // wrong scheme
+	}
+	for _, tc := range cases {
+		h := http.Header{}
+		if tc.origin != "" {
+			h.Set("Origin", tc.origin)
+		}
+		conn, resp, err := d.Dial(wsURL(s.URL), h)
+		if tc.ok {
+			if err != nil {
+				t.Errorf("origin %q rejected: %v", tc.origin, err)
+				continue
+			}
+			_ = conn.Close()
+			continue
+		}
+		if err == nil {
+			_ = conn.Close()
+			t.Errorf("origin %q accepted", tc.origin)
+		} else if resp == nil || resp.StatusCode != http.StatusForbidden {
+			t.Errorf("origin %q: want 403, got %v", tc.origin, resp)
+		}
+	}
+}
+
+func TestAllowedOriginsForWildcardIncludesLoopback(t *testing.T) {
+	addr, _ := net.ResolveTCPAddr("tcp", "0.0.0.0:9000")
+	origins := AllowedOrigins(addr, []string{"http://extra.example"})
+	if origins[0] != "http://127.0.0.1:9000" || origins[len(origins)-1] != "http://extra.example" {
+		t.Fatalf("origins %v", origins)
+	}
 }
 
 // noRedirect returns a client that reports redirects instead of following them.

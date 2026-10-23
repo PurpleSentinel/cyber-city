@@ -15,8 +15,7 @@ import (
 
 // Hub sends each new client a hello snapshot, then every tick.
 //
-// Still prototype-grade: any origin may connect (T1.3) and a slow client
-// stalls the broadcast (T1.5).
+// Still prototype-grade: a slow client stalls the broadcast (T1.5).
 type Hub struct {
 	upgrader websocket.Upgrader
 	snapshot func() *protocol.Hello
@@ -25,10 +24,11 @@ type Hub struct {
 	clients map[*websocket.Conn]*uint64 // per-connection tick sequence
 }
 
-// NewHub returns a hub that builds hello messages with snapshot.
-func NewHub(snapshot func() *protocol.Hello) *Hub {
+// NewHub returns a hub that builds hello messages with snapshot and accepts
+// WebSocket upgrades only from allowedOrigins (AllowedOrigins); others get 403.
+func NewHub(snapshot func() *protocol.Hello, allowedOrigins []string) *Hub {
 	return &Hub{
-		upgrader: websocket.Upgrader{CheckOrigin: func(*http.Request) bool { return true }},
+		upgrader: websocket.Upgrader{CheckOrigin: originChecker(allowedOrigins)},
 		snapshot: snapshot,
 		clients:  make(map[*websocket.Conn]*uint64),
 	}

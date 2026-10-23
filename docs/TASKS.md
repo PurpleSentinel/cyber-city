@@ -117,7 +117,7 @@ Split into two PRs (AGENTS.md size rule):
   - The frontend calls `/api/session` first and shows `Invalid link` on `401`.
 - **Done when:** the T rows for `/auth` and `/api/session` pass. Manual check (described in the PR): opening the printed URL lands on `/` with no token in the address bar.
 
-### [ ] T1.3 Origin check and dev proxy
+### [x] T1.3 Origin check and dev proxy
 - **Depends:** T1.2. **Touches:** `internal/server`, `web/vite.config.ts`, `Makefile` (`dev`).
 - **Do:**
   - The upgrader's `CheckOrigin` allows only `http://<listen addr>` and `--allow-origin` values.
