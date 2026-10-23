@@ -191,7 +191,7 @@ Split into two PRs (AGENTS.md size rule):
 - **Do:** flow key, service-port rules, `server_side`, category table, TCP flag union, `flows.max_tracked` eviction (all from C).
 - **Done when:** table tests cover every service-port rule and every category row, and golden files are updated.
 
-### [ ] T2.5 Host table
+### [x] T2.5 Host table
 - **Depends:** T2.4. **Touches:** `internal/hosts`.
 - **Do:**
   - `first_seen`/`last_seen`, the `local` flag, "changed" semantics (P), `removed_hosts`.

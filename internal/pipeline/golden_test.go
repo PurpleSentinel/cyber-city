@@ -24,10 +24,12 @@ var fixtureNames = []string{
 
 func testOptions() Options {
 	return Options{
-		Window:     100 * time.Millisecond,
-		Heartbeat:  time.Second,
-		MaxTracked: 50000,
-		Server:     protocol.ServerInfo{Version: "test", Source: "file"},
+		Window:      100 * time.Millisecond,
+		Heartbeat:   time.Second,
+		MaxTracked:  50000,
+		MaxHosts:    2000,
+		IdleTimeout: 120 * time.Second,
+		Server:      protocol.ServerInfo{Version: "test", Source: "file"},
 	}
 }
 

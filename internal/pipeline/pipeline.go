@@ -15,6 +15,10 @@ type Options struct {
 	Window     time.Duration
 	Heartbeat  time.Duration
 	MaxTracked int
+	// MaxHosts bounds the host table; the least recently seen host is evicted.
+	MaxHosts int
+	// IdleTimeout removes hosts silent for this long (packet time).
+	IdleTimeout time.Duration
 	// Server describes the sensor in hello messages.
 	Server protocol.ServerInfo
 	// Anonymize pseudonymises host ids and hides addresses (--anonymize).
@@ -59,6 +63,7 @@ type Pipeline struct {
 	hosts     map[netip.Addr]*hostState
 	districts map[string]protocol.District
 	newDist   []protocol.District
+	removed   []string // host ids removed since the last tick
 }
 
 // New returns an empty pipeline.
@@ -137,6 +142,9 @@ func (p *Pipeline) touch(a netip.Addr, ts time.Time) {
 		} else {
 			h.district = protocol.OutlandsID
 		}
+		if p.opts.MaxHosts > 0 && len(p.hosts) >= p.opts.MaxHosts {
+			p.evictOldest()
+		}
 		p.hosts[a] = h
 	}
 	if ts.After(h.lastSeen) {
@@ -208,6 +216,8 @@ func (p *Pipeline) tick(end time.Time) *protocol.Tick {
 	p.mu.Lock()
 	t.Stats.HostsTotal = len(p.hosts)
 	t.Districts, p.newDist = p.newDist, nil
+	p.removeIdle(end)
+	t.RemovedHosts, p.removed = p.removed, nil
 	for _, h := range p.hosts {
 		if h.dirty {
 			t.Hosts = append(t.Hosts, h.wire(p.id))
@@ -238,4 +248,37 @@ func (p *Pipeline) Snapshot() *protocol.Hello {
 	}
 	protocol.SortHello(h)
 	return h
+}
+
+// evictOldest removes the least recently seen host (ties: lowest address);
+// callers hold p.mu.
+func (p *Pipeline) evictOldest() {
+	var oldest *hostState
+	for _, h := range p.hosts {
+		if oldest == nil || h.lastSeen.Before(oldest.lastSeen) ||
+			(h.lastSeen.Equal(oldest.lastSeen) && h.addr.Less(oldest.addr)) {
+			oldest = h
+		}
+	}
+	if oldest != nil {
+		p.remove(oldest)
+	}
+}
+
+// removeIdle drops hosts silent for IdleTimeout as of packet time now;
+// callers hold p.mu.
+func (p *Pipeline) removeIdle(now time.Time) {
+	if p.opts.IdleTimeout <= 0 {
+		return
+	}
+	for _, h := range p.hosts {
+		if now.Sub(h.lastSeen) >= p.opts.IdleTimeout {
+			p.remove(h)
+		}
+	}
+}
+
+func (p *Pipeline) remove(h *hostState) {
+	delete(p.hosts, h.addr)
+	p.removed = append(p.removed, p.id.hostID(h.addr))
 }
