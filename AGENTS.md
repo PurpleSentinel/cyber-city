@@ -59,7 +59,7 @@ Run everything through `make` so local runs and CI match.
 | `make setcap` | `sudo setcap cap_net_raw,cap_net_admin+eip bin/cybercity` (live capture without root) |
 
 ### Environment
-- Go ≥ 1.24, Node 22 (`.nvmrc`), and libpcap headers for live capture: Fedora `sudo dnf install golang libpcap-devel nodejs`, Debian/Ubuntu `sudo apt install golang libpcap-dev nodejs npm`.
+- Go ≥ 1.25, Node 22 (`.nvmrc`), and libpcap headers for live capture: Fedora `sudo dnf install golang libpcap-devel nodejs`, Debian/Ubuntu `sudo apt install golang libpcap-dev nodejs npm`.
 - If a tool is missing locally, say so in the PR and rely on CI. Don't skip checks silently.
 - Tests never need root, network access or a real interface, except the `live`-tagged smoke test.
 

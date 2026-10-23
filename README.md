@@ -10,25 +10,14 @@ CyberCity-3D is a real-time network traffic visualizer that transforms live netw
 
 ## 🚀 Getting Started
 
-### 1. Run the Backend Sniffer
-Requires Go and libpcap developer headers.
+Requires Go ≥ 1.25, Node 22 and libpcap headers (Fedora: `sudo dnf install golang libpcap-devel nodejs`; Debian/Ubuntu: `sudo apt install golang libpcap-dev nodejs npm`).
+
 ```bash
-cd sniffer
-go mod tidy
-sudo go run main.go
+make setup     # Go modules, web dependencies, Playwright browser
+make build     # builds the frontend and embeds it in bin/cybercity
+sudo bin/cybercity
 ```
 
-### 2. Run the Frontend
-```bash
-cd frontend
-npm install
-npm run dev
-```
+Then open http://localhost:8080. One process captures traffic and serves the page.
 
-### 3. Mock Traffic Generator (Optional)
-If you don't want to run as root or want to test immediately:
-```bash
-cd tools/generator
-npm install
-node mock-traffic-flooder.js
-```
+A no-root replay mode (`--read capture.pcap`) arrives in T0.8; see [docs/TASKS.md](docs/TASKS.md) for progress. Contributors: start with [AGENTS.md](AGENTS.md).
