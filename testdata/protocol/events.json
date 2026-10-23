@@ -1,0 +1,72 @@
+{
+  "v": 1,
+  "type": "tick",
+  "seq": 4300,
+  "ts": 1767225660000,
+  "window_ms": 100,
+  "stats": {
+    "packets": 3000,
+    "bytes": 180000,
+    "flows": 0,
+    "hosts_total": 150,
+    "kernel_drops": 0,
+    "if_drops": 0
+  },
+  "districts": [],
+  "flows": [],
+  "hosts": [],
+  "removed_hosts": [
+    "10.0.1.30"
+  ],
+  "events": [
+    {
+      "id": "e-17",
+      "kind": "port_scan",
+      "ts": 1767225660000,
+      "severity": "alert",
+      "src": "10.0.1.66",
+      "dst": "10.0.9.5",
+      "targets": [
+        "10.0.9.5"
+      ],
+      "evidence": {
+        "distinct_hosts": 1,
+        "distinct_ports": 1024,
+        "incomplete_ratio": 0.99,
+        "window_s": 10
+      },
+      "duration_ms": 6000
+    },
+    {
+      "id": "e-18",
+      "kind": "flood",
+      "ts": 1767225660000,
+      "severity": "alert",
+      "src": null,
+      "dst": "10.0.9.5",
+      "targets": [
+        "10.0.9.5"
+      ],
+      "evidence": {
+        "baseline_pps": 50,
+        "distinct_sources": 300,
+        "pps": 3000,
+        "window_s": 5
+      },
+      "duration_ms": 8000
+    },
+    {
+      "id": "e-19",
+      "kind": "host_idle",
+      "ts": 1767225660000,
+      "severity": "info",
+      "src": "10.0.1.30",
+      "dst": null,
+      "targets": [],
+      "evidence": {
+        "idle_s": 120
+      },
+      "duration_ms": 5000
+    }
+  ]
+}

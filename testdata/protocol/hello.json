@@ -1,0 +1,86 @@
+{
+  "v": 1,
+  "type": "hello",
+  "server": {
+    "version": "test",
+    "source": "live",
+    "iface": "enp3s0",
+    "window_ms": 100,
+    "anonymized": false,
+    "show_mac": false,
+    "geoip": true
+  },
+  "districts": [
+    {
+      "id": "core",
+      "name": "Server Core",
+      "kind": "server",
+      "cidrs": [
+        "10.0.9.0/24"
+      ]
+    },
+    {
+      "id": "corp",
+      "name": "Corporate",
+      "kind": "lan",
+      "cidrs": [
+        "10.0.1.0/24"
+      ]
+    },
+    {
+      "id": "outlands",
+      "name": "The Outlands",
+      "kind": "outlands",
+      "cidrs": []
+    }
+  ],
+  "hosts": [
+    {
+      "id": "10.0.1.10",
+      "ip": "10.0.1.10",
+      "local": true,
+      "district": "corp",
+      "mac": null,
+      "vendor": "Raspberry Pi Foundation",
+      "device_class": "iot",
+      "services": [
+        {
+          "port": 22,
+          "proto": "tcp",
+          "category": "ssh",
+          "confirmed": true
+        }
+      ],
+      "geo": null,
+      "first_seen": 1767225600000,
+      "last_seen": 1767225610090,
+      "rtt_ms": 11.8,
+      "retrans_rate": 0
+    },
+    {
+      "id": "203.0.113.10",
+      "ip": "203.0.113.10",
+      "local": false,
+      "district": "outlands",
+      "mac": null,
+      "vendor": null,
+      "device_class": "server",
+      "services": [
+        {
+          "port": 443,
+          "proto": "tcp",
+          "category": "https",
+          "confirmed": true
+        }
+      ],
+      "geo": {
+        "sector": "NE",
+        "country": "JP"
+      },
+      "first_seen": 1767225600000,
+      "last_seen": 1767225610090,
+      "rtt_ms": 12.1,
+      "retrans_rate": 0.002
+    }
+  ]
+}
