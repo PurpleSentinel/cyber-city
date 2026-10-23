@@ -1,0 +1,25 @@
+version: "2"
+
+linters:
+  enable:
+    - govet
+    - staticcheck
+    - errcheck
+    - gosec
+    - revive
+  settings:
+    gosec:
+      excludes:
+        - G104 # duplicate of errcheck
+  exclusions:
+    presets:
+      - comments
+      - std-error-handling
+    rules:
+      # Test and tool code may use fixed seeds, read files by path, etc.
+      - path: (_test\.go|^tools/)
+        linters: [gosec]
+
+formatters:
+  enable:
+    - gofmt

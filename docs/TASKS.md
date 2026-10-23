@@ -14,7 +14,7 @@ Spec abbreviations: **P** = PROTOCOL.md, **C** = CONFIG.md, **V** = VISUAL_SPEC.
 
 ## Milestone 0: Foundations
 
-### [ ] T0.1 Toolchain and repo hygiene
+### [x] T0.1 Toolchain and repo hygiene
 - **Depends:** none. **Touches:** `Makefile`, `.gitignore`, `.editorconfig`, `.golangci.yml`, `.nvmrc`, `go.mod`.
 - **Do:**
   - Root `go.mod` (`module github.com/PurpleSentinel/cyber-city`, Go ≥ 1.24 with a `toolchain` line).

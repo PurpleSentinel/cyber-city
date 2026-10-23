@@ -1,0 +1,26 @@
+# Build output
+/bin/
+
+# Frontend
+/web/node_modules/
+/web/dist/*
+!/web/dist/.gitkeep
+/web/e2e/artifacts/
+/web/test-results/
+/web/playwright-report/
+
+# Captures: only synthetic fixtures under testdata/ are allowed (AGENTS.md hard rule 4)
+*.pcap
+*.pcapng
+!/testdata/**/*.pcap
+*.mmdb
+!/testdata/geo/*.mmdb
+
+# Editors / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Claude Code worktrees
+/.claude/worktrees/
