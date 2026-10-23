@@ -10,6 +10,7 @@ import { INVALID_LINK_MESSAGE } from "./net/session";
 import type { Host } from "./protocol";
 import { Buildings } from "./render/buildings";
 import { Lightning } from "./render/effects/lightning";
+import { Searchlights } from "./render/effects/searchlight";
 import { Highways } from "./render/highways";
 import { Particles } from "./render/particles";
 import { clearSamples, poseFor, probe } from "./render/probe";
@@ -61,6 +62,8 @@ const buildings = new Buildings();
 scene.add(buildings.mesh);
 const lightning = new Lightning();
 scene.add(lightning.group);
+const searchlights = new Searchlights((id) => buildings.geometry(id));
+scene.add(searchlights.group);
 const highwayModel = new HighwayModel();
 const highways = new Highways();
 scene.add(highways.mesh);
@@ -189,6 +192,15 @@ store.subscribe({
   },
   hostAdded: place,
   hostUpdated: (h) => buildings.update(h),
+  event(e) {
+    // Event effects (VISUAL_SPEC "Event effects"); over the caps, events are only logged.
+    if (e.kind === "port_scan" && e.src && searchlights.start(e.src, e.targets)) {
+      for (const id of e.targets) {
+        const g = buildings.geometry(id);
+        if (g) lightning.strike(g.x, g.z, g.base + g.height);
+      }
+    }
+  },
   hostRemoved(id) {
     if (inspector.selected === id) inspector.clear();
     buildings.remove(id);
@@ -353,6 +365,7 @@ function animate(now?: number): void {
   const dt = Math.min(timer.getDelta(), 0.1);
   buildings.frame(dt, timer.getElapsed());
   lightning.frame(dt);
+  searchlights.frame(dt);
   particles.frame(dt);
   const posed = applyPose();
   stepFlight(dt);

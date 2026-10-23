@@ -351,7 +351,7 @@ Split into two PRs (AGENTS.md size rule):
 - **Do:** a `host_idle` event for local hosts, in the same tick as their removal.
 - **Done when:** the `idle` assertion passes.
 
-### [ ] T4.5 Searchlight effect
+### [x] T4.5 Searchlight effect
 - **Depends:** T3.4, T4.2. **Touches:** `web/src/render/effects/searchlight.ts`.
 - **Do:** as V; targets get lightning.
 - **Done when:** Vitest checks target sequencing and duration, and e2e sees the `demo` scan in `lastEvents()`.

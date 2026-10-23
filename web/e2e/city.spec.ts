@@ -16,6 +16,10 @@ test("the city renders from the demo replay", async ({ page }) => {
   await expect.poll(() => page.evaluate(() => window.__cybercity!.stats().buildings), { timeout: 30_000 }).toBeGreaterThanOrEqual(30);
   await expect.poll(() => page.evaluate(() => window.__cybercity!.stats().highways), { timeout: 30_000 }).toBeGreaterThanOrEqual(5);
   await expect.poll(() => page.evaluate(() => window.__cybercity!.stats().particles), { timeout: 30_000 }).toBeGreaterThan(0);
+  // The demo scan fires 60 s into the capture: 15 s at 4x replay.
+  await expect
+    .poll(() => page.evaluate(() => window.__cybercity!.lastEvents().map((e) => e.kind)), { timeout: 25_000 })
+    .toContain("port_scan");
 
   // Headless Chromium renders with SwiftShader: the warning shows and quality drops.
   const stats = await page.evaluate(() => window.__cybercity!.stats());
