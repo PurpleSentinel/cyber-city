@@ -20,6 +20,7 @@ import { HighwayModel } from "./state/highways";
 import { bytesByHost } from "./state/rate";
 import { Store } from "./state/store";
 import { HELP_TEXT, Hud, MovingRate, formatHosts, formatPps, formatRate } from "./ui/hud";
+import { InspectorView, inspectorRows, tooltipText } from "./ui/inspector";
 import "./ui/styles.css";
 
 // App wiring: the shaded city of docs/VISUAL_SPEC.md.
@@ -83,7 +84,55 @@ const qualityCtl = new QualityController(
   },
   quality,
 );
-// Keys (VISUAL_SPEC "HUD and interaction"); F and Esc arrive with the inspector.
+// ---- Inspector: hover tooltip, click panel, F fly-to, Esc clear ----------------
+const inspector = new InspectorView();
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+let inspectedAt = 0;
+let flight: { from: THREE.Vector3; to: THREE.Vector3; fromT: THREE.Vector3; toT: THREE.Vector3; t: number } | null = null;
+
+function pick(clientX: number, clientY: number): string | null {
+  pointer.set((clientX / window.innerWidth) * 2 - 1, -(clientY / window.innerHeight) * 2 + 1);
+  raycaster.setFromCamera(pointer, camera);
+  buildings.mesh.computeBoundingSphere();
+  const hit = raycaster.intersectObject(buildings.mesh, false)[0];
+  return hit?.instanceId === undefined ? null : buildings.idAt(hit.instanceId);
+}
+
+function showInspector(id: string): void {
+  const h = store.hosts.get(id);
+  if (!h) return;
+  const district = store.districts.get(h.district)?.name ?? h.district;
+  inspector.show(id, inspectorRows(h, district, buildings.rateOf(id)));
+}
+
+renderer.domElement.addEventListener("pointermove", (e) => {
+  const id = pick(e.clientX, e.clientY);
+  const h = id ? store.hosts.get(id) : undefined;
+  inspector.hover(h ? tooltipText(h) : null, e.clientX, e.clientY);
+});
+renderer.domElement.addEventListener("click", (e) => {
+  const id = pick(e.clientX, e.clientY);
+  if (id) showInspector(id);
+});
+
+function flyToSelected(): void {
+  const g = inspector.selected ? buildings.geometry(inspector.selected) : null;
+  if (!g) return;
+  const { position, target } = poseFor(g);
+  flight = { from: camera.position.clone(), to: position, fromT: controls.target.clone(), toT: target, t: 0 };
+}
+
+function stepFlight(dt: number): void {
+  if (!flight) return;
+  flight.t = Math.min(1, flight.t + dt); // one second
+  const k = flight.t * flight.t * (3 - 2 * flight.t); // smoothstep
+  camera.position.lerpVectors(flight.from, flight.to, k);
+  controls.target.lerpVectors(flight.fromT, flight.toT, k);
+  if (flight.t >= 1) flight = null;
+}
+
+// Keys (VISUAL_SPEC "HUD and interaction").
 const helpBox = document.getElementById("help");
 const helpList = document.getElementById("help-list");
 for (const line of HELP_TEXT) {
@@ -103,6 +152,10 @@ window.addEventListener("keydown", (e) => {
     hud.set({ status: describe(lastState) });
   } else if (e.key === "?") {
     if (helpBox) helpBox.hidden = !helpBox.hidden;
+  } else if (e.key === "f" || e.key === "F") {
+    flyToSelected();
+  } else if (e.key === "Escape") {
+    inspector.clear();
   }
 });
 
@@ -137,6 +190,7 @@ store.subscribe({
   hostAdded: place,
   hostUpdated: (h) => buildings.update(h),
   hostRemoved(id) {
+    if (inspector.selected === id) inspector.clear();
     buildings.remove(id);
     highwayModel.removeHost(id);
   },
@@ -286,6 +340,11 @@ function animate(now?: number): void {
   lightning.frame(dt);
   particles.frame(dt);
   applyPose();
+  stepFlight(dt);
+  if (inspector.selected && store.ticks - inspectedAt >= 10) {
+    inspectedAt = store.ticks; // refresh about once a second of ticks
+    showInspector(inspector.selected);
+  }
   controls.update();
   composer.render(dt);
   if (!rendered && store.server) {
