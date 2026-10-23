@@ -18,9 +18,10 @@ export default tseslint.config(
   },
   {
     // The city is solid, lit and shadowed: never wireframe (docs/DECISIONS.md
-    // D17, TESTING.md "Shading guards"). The meteor shield effect is exempt.
+    // D17, TESTING.md "Shading guards"). The searchlight cone and target
+    // outlines and the meteor shield are unlit overlays, so they are exempt.
     files: ["src/render/**/*.ts"],
-    ignores: ["src/render/effects/meteor.ts"],
+    ignores: ["src/render/effects/meteor.ts", "src/render/effects/searchlight.ts"],
     rules: {
       "no-restricted-syntax": [
         "error",
