@@ -104,6 +104,32 @@ func TestBPFFilterYieldsNoFlows(t *testing.T) {
 	}
 }
 
+// docs/TESTING.md ipv6.pcap row: IPv6 ids, fd00:1::10 local, NDP is control.
+func TestIPv6FixtureAssertions(t *testing.T) {
+	var sawTCP6, sawNDP, sawLocal bool
+	for _, tk := range ticks(t, runFixture(t, "ipv6", testOptions())) {
+		for _, f := range tk.Flows {
+			if f.Proto == "tcp" && f.Dst == "2001:db8:ffff::1" && f.Category == protocol.CatHTTPS {
+				sawTCP6 = true
+			}
+			if f.Proto == "icmpv6" && f.Category == protocol.CatControl {
+				sawNDP = true
+			}
+		}
+		for _, h := range tk.Hosts {
+			if h.ID == "fd00:1::10" {
+				sawLocal = h.Local && h.District == "lan-fd00-1-0-0"
+			}
+			if h.ID == "2001:db8:ffff::1" && (h.Local || h.District != protocol.OutlandsID) {
+				t.Fatalf("external IPv6 host misplaced: %+v", h)
+			}
+		}
+	}
+	if !sawTCP6 || !sawNDP || !sawLocal {
+		t.Fatalf("tcp6 https=%v ndp control=%v fd00:1::10 local=%v", sawTCP6, sawNDP, sawLocal)
+	}
+}
+
 func TestDeterministic(t *testing.T) {
 	a, b := runFixture(t, "demo", testOptions()), runFixture(t, "demo", testOptions())
 	if !bytes.Equal(a, b) {
