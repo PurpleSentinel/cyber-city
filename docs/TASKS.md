@@ -307,7 +307,7 @@ Split into two PRs (AGENTS.md size rule):
 - **Do:** the pool, emission rate, RTT-based travel time, direction (V).
 - **Done when:** Vitest covers the emission and travel-time formulas and the pool cap (never more than 5000 live).
 
-### [ ] T3.9 Post-processing and quality modes
+### [x] T3.9 Post-processing and quality modes
 - **Depends:** T3.4. **Touches:** `web/src/render/post.ts`.
 - **Do:** bloom (threshold 0.85, so lit bodies don't bloom), OutputPass, low-quality toggle `L` (drops shadows, bloom and half the particles, but materials stay lit), automatic low quality on software rendering, and the `quality=` debug override.
 - **Done when:** the debug hook reports `quality` and `shadows` correctly; under SwiftShader the default is `low` with `lit === true`, and `quality=high` turns shadows on.

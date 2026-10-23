@@ -20,15 +20,16 @@ export class Particles {
   private readonly dummy = new THREE.Object3D();
   private readonly tmp = new THREE.Color();
 
+  /** Buffers hold the full pool; QualityController lowers system.capacity in low mode. */
   constructor(low: boolean) {
-    const capacity = low ? PARTICLES.poolLow : PARTICLES.pool;
+    const capacity = PARTICLES.pool;
     const geo = new THREE.BoxGeometry(...PARTICLES.size);
     ({ color: this.color, alpha: this.alpha } = glowAttributes(geo, capacity));
     this.mesh = new THREE.InstancedMesh(geo, glowMaterial(), capacity);
     this.mesh.count = 0;
     this.mesh.frustumCulled = false;
     this.mesh.name = "particles";
-    this.system = new ParticleSystem(capacity);
+    this.system = new ParticleSystem(low ? PARTICLES.poolLow : capacity);
   }
 
   /** Rebuilds emitters from the visible roads (call on each tick). */
