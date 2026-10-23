@@ -37,6 +37,19 @@ func TestLookup(t *testing.T) {
 	}
 }
 
+func TestFindPrefix(t *testing.T) {
+	p, ok := FindPrefix("Raspberry Pi")
+	if !ok {
+		t.Fatal("Raspberry Pi prefix not found")
+	}
+	if v, _ := Lookup(append(p, 0, 0, 1)); !strings.Contains(v, "Raspberry Pi") {
+		t.Fatalf("round trip vendor = %q", v)
+	}
+	if _, ok := FindPrefix("No Such Vendor Corp 12345"); ok {
+		t.Fatal("unexpected match")
+	}
+}
+
 func TestTableIsSortedAndConsistent(t *testing.T) {
 	if len(ouiPrefixes) != len(ouiVendorIndex) {
 		t.Fatalf("table lengths differ: %d vs %d", len(ouiPrefixes), len(ouiVendorIndex))
