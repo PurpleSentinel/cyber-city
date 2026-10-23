@@ -12,7 +12,11 @@ interface Pair {
   a: string;
   b: string;
   rate: number; // bytes/s EWMA (half-life 2 s, like buildings)
+  pps: number; // packets/s EWMA
+  rttMs: number | null; // latest handshake RTT seen on the pair
   lastSeen: number; // packet time ms
+  lastAB: number; // last traffic a → b
+  lastBA: number; // last traffic b → a
   lastSample: number;
   categories: Map<string, number>; // decayed bytes per category
 }
@@ -25,6 +29,11 @@ export interface Road {
   category: string;
   opacity: number;
   rate: number;
+  pps: number;
+  rttMs: number | null;
+  /** Traffic a → b / b → a within the last second: particles flow that way. */
+  forward: boolean;
+  backward: boolean;
 }
 
 export interface Segment {
@@ -62,28 +71,42 @@ export class HighwayModel {
   /** Adds a tick's flows between known hosts (isHost filters out group addresses). */
   applyTick(flows: readonly Flow[], windowMs: number, ts: number, isHost: (id: string) => boolean): void {
     this.nowTs = ts;
-    const bytes = new Map<string, { a: string; b: string; total: number; cats: Map<string, number> }>();
+    const bytes = new Map<
+      string,
+      { a: string; b: string; total: number; packets: number; rtt: number | null; ab: boolean; ba: boolean; cats: Map<string, number> }
+    >();
     for (const f of flows) {
       if (f.src === f.dst || !isHost(f.src) || !isHost(f.dst)) continue;
       const key = pairKey(f.src, f.dst);
       let e = bytes.get(key);
       if (!e) {
-        e = { a: f.src < f.dst ? f.src : f.dst, b: f.src < f.dst ? f.dst : f.src, total: 0, cats: new Map() };
+        e = { a: f.src < f.dst ? f.src : f.dst, b: f.src < f.dst ? f.dst : f.src, total: 0, packets: 0, rtt: null, ab: false, ba: false, cats: new Map() };
         bytes.set(key, e);
       }
       e.total += f.bytes;
+      e.packets += f.packets;
+      if (f.rtt_ms !== null) e.rtt = f.rtt_ms;
+      // A flow with a known server carries requests and replies, so particles
+      // run both ways; otherwise only from its source.
+      if (f.src === e.a || f.server_side !== null) e.ab = true;
+      if (f.src === e.b || f.server_side !== null) e.ba = true;
       const cat = asCategory(f.category);
       e.cats.set(cat, (e.cats.get(cat) ?? 0) + f.bytes);
     }
     for (const [key, e] of bytes) {
       let p = this.pairs.get(key);
       if (!p) {
-        p = { a: e.a, b: e.b, rate: 0, lastSeen: ts, lastSample: 0, categories: new Map() };
+        p = { a: e.a, b: e.b, rate: 0, pps: 0, rttMs: null, lastSeen: ts, lastAB: 0, lastBA: 0, lastSample: 0, categories: new Map() };
         this.pairs.set(key, p);
       }
       const sample = e.total / (windowMs / 1000);
       const dt = p.lastSample === 0 ? Infinity : (ts - p.lastSample) / 1000;
-      p.rate += (1 - 2 ** (-dt / 2)) * (sample - p.rate);
+      const alpha = 1 - 2 ** (-dt / 2);
+      p.rate += alpha * (sample - p.rate);
+      p.pps += alpha * (e.packets / (windowMs / 1000) - p.pps);
+      if (e.rtt !== null) p.rttMs = e.rtt;
+      if (e.ab) p.lastAB = ts;
+      if (e.ba) p.lastBA = ts;
       const keep = 2 ** (-Math.max(0, (ts - p.lastSample) / 1000) / CATEGORY_HALF_LIFE_S);
       for (const [c, v] of p.categories) p.categories.set(c, v * keep);
       for (const [c, v] of e.cats) p.categories.set(c, (p.categories.get(c) ?? 0) + v);
@@ -116,7 +139,12 @@ export class HighwayModel {
         if (v > best || (v === best && c < category)) [category, best] = [c, v];
       }
       const rate = p.rate * 2 ** (-Math.max(0, nowTs - p.lastSample) / 1000 / 2);
-      out.push({ key, a: p.a, b: p.b, width: roadWidth(rate), category, opacity, rate });
+      const decay = 2 ** (-Math.max(0, nowTs - p.lastSample) / 1000 / 2);
+      out.push({
+        key, a: p.a, b: p.b, width: roadWidth(rate), category, opacity, rate,
+        pps: p.pps * decay, rttMs: p.rttMs,
+        forward: nowTs - p.lastAB <= 1000, backward: nowTs - p.lastBA <= 1000,
+      });
     }
     out.sort((x, y) => y.rate - x.rate || (x.key < y.key ? -1 : 1));
     return out.slice(0, HIGHWAYS.max);
