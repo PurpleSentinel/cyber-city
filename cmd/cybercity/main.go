@@ -106,7 +106,12 @@ func run(ctx context.Context, cfg config.Config) error {
 		}
 	}
 
-	hub := server.NewHub(p.Snapshot, server.AllowedOrigins(ln.Addr(), cfg.AllowOrigins))
+	hub := server.NewHub(p.Snapshot, server.AllowedOrigins(ln.Addr(), cfg.AllowOrigins), server.HubOptions{
+		MaxClients:   cfg.Server.MaxClients,
+		ClientQueue:  cfg.Server.ClientQueue,
+		WriteTimeout: cfg.Server.WriteTimeout.D(),
+		PingInterval: cfg.Server.PingInterval.D(),
+	})
 	for _, o := range cfg.AllowOrigins {
 		slog.Info("extra origin allowed", "dev_url", auth.AuthURL(o+"/"))
 	}
