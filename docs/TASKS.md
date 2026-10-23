@@ -346,7 +346,7 @@ Split into two PRs (AGENTS.md size rule):
 - **Do:** the flood rules in C, with the baseline frozen during floods.
 - **Done when:** the `flood` assertions pass and no other fixture has `flood` events.
 
-### [ ] T4.4 Host-idle event
+### [x] T4.4 Host-idle event
 - **Depends:** T4.1, T2.5. **Touches:** `internal/detect/idle.go`.
 - **Do:** a `host_idle` event for local hosts, in the same tick as their removal.
 - **Done when:** the `idle` assertion passes.
