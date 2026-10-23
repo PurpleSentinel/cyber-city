@@ -16,6 +16,7 @@ import (
 	"github.com/PurpleSentinel/cyber-city/internal/buildinfo"
 	"github.com/PurpleSentinel/cyber-city/internal/capture"
 	"github.com/PurpleSentinel/cyber-city/internal/config"
+	"github.com/PurpleSentinel/cyber-city/internal/detect"
 	"github.com/PurpleSentinel/cyber-city/internal/districts"
 	"github.com/PurpleSentinel/cyber-city/internal/enrich"
 	"github.com/PurpleSentinel/cyber-city/internal/pipeline"
@@ -97,8 +98,18 @@ func run(ctx context.Context, cfg config.Config) error {
 		RetransWindow:    cfg.Enrich.RetransWindow.D(),
 		GatewayMinIPs:    cfg.Enrich.GatewayMinIPs,
 		ClassInterval:    cfg.Enrich.ClassInterval.D(),
-		Server:           info,
-		Anonymize:        cfg.Anonymize,
+		Detectors: []detect.Detector{detect.NewScan(detect.ScanConfig{
+			Window:             cfg.Detect.Scan.Window.D(),
+			MinPorts:           cfg.Detect.Scan.MinPorts,
+			MinHosts:           cfg.Detect.Scan.MinHosts,
+			MinIncompleteRatio: cfg.Detect.Scan.MinIncompleteRatio,
+			UDPMinPorts:        cfg.Detect.Scan.UDPMinPorts,
+		})},
+		Cooldowns: map[string]time.Duration{
+			protocol.EventPortScan: cfg.Detect.Scan.Cooldown.D(),
+		},
+		Server:    info,
+		Anonymize: cfg.Anonymize,
 	})
 
 	if cfg.DumpJSON != "" {
