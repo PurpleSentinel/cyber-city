@@ -336,7 +336,7 @@ Split into two PRs (AGENTS.md size rule):
 - **Do:** a `Detector` interface fed per packet record and per window, event ids, cooldowns, max-64 targets, ordering.
 - **Done when:** unit tests cover cooldown suppression and id sequencing.
 
-### [ ] T4.2 Port-scan detector
+### [x] T4.2 Port-scan detector
 - **Depends:** T4.1, T2.7. **Touches:** `internal/detect/scan.go`.
 - **Do:** the scan rules in C (TCP and UDP).
 - **Done when:** the `scan_syn` and `scan_sweep` assertions pass and `web_https`, `dns`, `ssh`, `demo` (except its one scan) have zero `port_scan` events.

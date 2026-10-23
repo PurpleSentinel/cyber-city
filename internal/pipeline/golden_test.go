@@ -14,6 +14,7 @@ import (
 
 	"github.com/PurpleSentinel/cyber-city/internal/capture"
 	"github.com/PurpleSentinel/cyber-city/internal/config"
+	"github.com/PurpleSentinel/cyber-city/internal/detect"
 	"github.com/PurpleSentinel/cyber-city/internal/districts"
 	"github.com/PurpleSentinel/cyber-city/internal/enrich"
 	"github.com/PurpleSentinel/cyber-city/internal/protocol"
@@ -40,6 +41,10 @@ func testOptions() Options {
 		GatewayMinIPs:    5,
 		ClassInterval:    10 * time.Second,
 		Server:           protocol.ServerInfo{Version: "test", Source: "file"},
+		Detectors: []detect.Detector{detect.NewScan(detect.ScanConfig{
+			Window: 10 * time.Second, MinPorts: 50, MinHosts: 20, MinIncompleteRatio: 0.8, UDPMinPorts: 100,
+		})},
+		Cooldowns: map[string]time.Duration{protocol.EventPortScan: 60 * time.Second},
 	}
 }
 
