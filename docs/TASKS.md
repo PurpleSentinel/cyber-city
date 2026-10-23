@@ -154,7 +154,7 @@ Split into two PRs (AGENTS.md size rule):
 - **Do:** snaplen 256 default; `--show-mac`; `--anonymize` (HMAC ids, `ip: null`, anonymous districts, test hook for a fixed key).
 - **Done when:** golden `web_https --anonymize` contains no `10.0.1.` or `203.0.113.` substrings anywhere, and `--show-mac` toggles `mac` fields in golden output.
 
-### [ ] T1.8 Live capture smoke test and SECURITY.md
+### [x] T1.8 Live capture smoke test and SECURITY.md
 - **Depends:** T1.6. **Touches:** `internal/capture/live_test.go` (`//go:build live`), CI, `SECURITY.md`.
 - **Do:**
   - The test captures on `lo` while it pings 127.0.0.1 and curls a local `httptest` server, and asserts that at least one flow arrives.
@@ -162,7 +162,7 @@ Split into two PRs (AGENTS.md size rule):
   - `SECURITY.md`: supported versions, how to report (GitHub private vulnerability reporting), the threat model summary from DESIGN.md.
 - **Done when:** the live-smoke job is green.
 
-**After M1:** remove the "Security" warning from the README.
+**After M1:** remove the "Security" warning from the README (done in T1.8).
 
 ---
 

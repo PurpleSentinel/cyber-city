@@ -6,7 +6,7 @@ CyberCity-3D is a real-time network traffic visualizer that transforms live netw
 >
 > **Visibility:** on a switched network, promiscuous mode only sees broadcast/multicast traffic and this host's own traffic. To see every host, capture from a SPAN/mirror port or a network TAP.
 >
-> **Security:** the current sniffer's WebSocket is unauthenticated and listens on all interfaces. Run it only on a trusted network until Milestone 1 lands.
+> **Security:** safe by default: loopback-only, token-and-cookie login, origin checks, no packet payloads, and root dropped after the capture opens. See [SECURITY.md](SECURITY.md).
 
 ## 🚀 Getting Started
 
