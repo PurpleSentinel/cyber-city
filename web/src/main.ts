@@ -1,16 +1,19 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { CAMERA, MAX_BUILDINGS, PALETTE, SCENE } from "./config";
+import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
+import { CAMERA, DEVICE_COLORS, LIGHTING, MAX_BUILDINGS, MATERIALS, PALETTE, SCENE } from "./config";
+import { Layout } from "./layout/layout";
 import { debugEnabled, installDebug } from "./debug";
 import type { ConnectionState } from "./net/connection";
 import { Connection, defaultDeps } from "./net/connection";
 import { INVALID_LINK_MESSAGE } from "./net/session";
 import { rendererInfo } from "./render/rendererInfo";
+import { Plots, addLights, configureRenderer, createGround, setEnvironment } from "./render/scene";
 import { Store } from "./state/store";
 import "./ui/styles.css";
 
-// App wiring (T3.1). The buildings are still the prototype's wireframe boxes;
-// the shaded city replaces them from T3.3a/T3.4 (docs/VISUAL_SPEC.md).
+// App wiring. Lighting, ground and plots follow docs/VISUAL_SPEC.md (T3.3a);
+// buildings are simple lit boxes until the dark-glass material lands in T3.4.
 
 const params = new URLSearchParams(window.location.search);
 
@@ -21,6 +24,7 @@ const quality: "high" | "low" = forced === "high" || forced === "low" ? forced :
 renderer.setPixelRatio(quality === "low" ? 1 : Math.min(window.devicePixelRatio, SCENE.maxPixelRatio));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setClearColor(PALETTE.bg);
+configureRenderer(renderer, quality);
 document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
@@ -30,18 +34,32 @@ camera.position.set(...CAMERA.position);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = CAMERA.damping;
-scene.add(new THREE.GridHelper(SCENE.groundSize, SCENE.gridDivisions, PALETTE.gridMajor, PALETTE.gridMinor));
+controls.maxPolarAngle = (CAMERA.maxPolarAngleDeg * Math.PI) / 180;
+controls.minDistance = CAMERA.minDistance;
+controls.maxDistance = CAMERA.maxDistance;
 
-// ---- Prototype buildings (replaced in T3.4) ------------------------------
+addLights(scene, quality);
+const pmrem = new THREE.PMREMGenerator(renderer);
+setEnvironment(scene, pmrem.fromScene(new RoomEnvironment(), LIGHTING.environment.sigma).texture);
+pmrem.dispose();
+scene.add(createGround());
+const plots = new Plots();
+scene.add(plots.mesh);
+const layout = new Layout();
+
+// ---- Interim buildings (lit boxes; replaced by the T3.4 material) ---------
 const geometry = new THREE.BoxGeometry(2, 1, 2);
 geometry.translate(0, 0.5, 0);
 const buildingMesh = new THREE.InstancedMesh(
   geometry,
-  new THREE.MeshBasicMaterial({ color: PALETTE.gridMajor, wireframe: true }),
+  new THREE.MeshStandardMaterial({ roughness: MATERIALS.building.roughness, metalness: MATERIALS.building.metalness }),
   MAX_BUILDINGS,
 );
+buildingMesh.castShadow = true;
+buildingMesh.receiveShadow = true;
 buildingMesh.count = 0;
 scene.add(buildingMesh);
+const tint = new THREE.Color();
 
 interface Building {
   index: number;
@@ -60,17 +78,24 @@ store.subscribe({
     buildings.clear();
     free.length = 0;
     buildingMesh.count = 0;
+    layout.reset();
+    plots.update([]);
   },
   hostAdded(h) {
     if (buildings.size >= MAX_BUILDINGS) return;
+    const kind = store.districts.get(h.district)?.kind ?? (h.local ? "lan" : "outlands");
+    const p = layout.place(h.id, h.district, kind, h.geo?.sector ?? null);
+    if (!p) return;
+    plots.update(layout.blocks());
     const index = free.pop() ?? buildingMesh.count++;
-    const angle = Math.random() * Math.PI * 2;
-    const radius = h.local ? 10 + Math.random() * 30 : 100;
-    buildings.set(h.id, { index, x: Math.cos(angle) * radius, z: Math.sin(angle) * radius, height: 1, target: 1 });
+    buildingMesh.setColorAt(index, tint.set(DEVICE_COLORS[h.device_class] ?? PALETTE.hud).multiplyScalar(0.35));
+    if (buildingMesh.instanceColor) buildingMesh.instanceColor.needsUpdate = true;
+    buildings.set(h.id, { index, x: p.x, z: p.z, height: 1, target: 1 });
   },
   hostRemoved(id) {
     const b = buildings.get(id);
     if (!b) return;
+    layout.release(id);
     buildings.delete(id);
     dummy.scale.set(0, 0, 0);
     dummy.updateMatrix();
@@ -126,9 +151,9 @@ const debug = debugEnabled()
         renderer: gpu.name,
         software: gpu.software,
         quality,
-        lit: false,
-        wireframe: true,
-        shadows: false,
+        lit: true,
+        wireframe: false,
+        shadows: renderer.shadowMap.enabled,
       }),
       hostIds: () => [...buildings.keys()],
       lastEvents: () => store.events.map((e) => ({ id: e.id, kind: e.kind })),
@@ -154,7 +179,7 @@ function animate(): void {
   controls.update();
   for (const b of buildings.values()) {
     b.height = THREE.MathUtils.lerp(b.height, b.target, 0.05);
-    dummy.position.set(b.x, 0, b.z);
+    dummy.position.set(b.x, MATERIALS.plot.height, b.z);
     dummy.scale.set(1, b.height, 1);
     dummy.updateMatrix();
     buildingMesh.setMatrixAt(b.index, dummy.matrix);

@@ -263,7 +263,7 @@ Split into two PRs (AGENTS.md size rule):
 - **Do:** fnv1a, block probing, slot probing, Outlands rings and sectors (V).
 - **Done when:** Vitest shows 2000 random ids give no overlapping footprints, the same ids in the same order give identical positions and each host takes its home slot unless already taken (D24; most hosts are then order-independent), server districts take the centre block, and sector placement follows V.
 
-### [ ] T3.3a Lighting rig, ground and district plots
+### [x] T3.3a Lighting rig, ground and district plots
 - **Depends:** T3.1, T3.3. **Touches:** `web/src/render/scene.ts`, `web/src/render/ground.ts`, `web/eslint.config.js`.
 - **Do:**
   - Implement V *Lighting, materials and shading*: renderer tone mapping and colour space, hemisphere light, shadow-casting moon, RoomEnvironment PMREM, lit ground, grid overlay, district plots with emissive borders.

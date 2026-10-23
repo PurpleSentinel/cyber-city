@@ -17,6 +17,21 @@ export default tseslint.config(
     },
   },
   {
+    // The city is solid, lit and shadowed: never wireframe (docs/DECISIONS.md
+    // D17, TESTING.md "Shading guards"). The meteor shield effect is exempt.
+    files: ["src/render/**/*.ts"],
+    ignores: ["src/render/effects/meteor.ts"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        { selector: "Property[key.name='wireframe'][value.value=true]", message: "City geometry must not be wireframe (D17)." },
+        { selector: "NewExpression[callee.name='MeshBasicMaterial'], NewExpression[callee.property.name='MeshBasicMaterial']", message: "Use a lit MeshStandardMaterial for city geometry (D17)." },
+        { selector: "NewExpression[callee.name='EdgesGeometry'], NewExpression[callee.property.name='EdgesGeometry']", message: "Edge geometry is not a building body (D17)." },
+        { selector: "NewExpression[callee.name='WireframeGeometry'], NewExpression[callee.property.name='WireframeGeometry']", message: "Wireframe geometry is not allowed for city geometry (D17)." },
+      ],
+    },
+  },
+  {
     // Tests may assert presence with `!`: a wrong guess fails the test anyway.
     files: ["test/**/*.ts", "e2e/**/*.ts"],
     rules: { "@typescript-eslint/no-non-null-assertion": "off" },
