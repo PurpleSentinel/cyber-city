@@ -176,7 +176,7 @@ Split into two PRs (AGENTS.md size rule):
   - Fail clearly if `--iface` doesn't exist.
 - **Done when:** a unit test parses a sample `/proc/net/route` and picks the right interface, and `--list-ifaces` marks the default.
 
-### [ ] T2.2 BPF filter
+### [x] T2.2 BPF filter
 - **Depends:** T2.1. **Touches:** `internal/capture`.
 - **Do:** `--bpf` for live capture (`SetBPFFilter`) and file replay (`pcap.NewBPF`, plus a clear error when libpcap is unavailable). An invalid expression fails at startup.
 - **Done when:** a golden-style test of `--read dns.pcap --bpf "tcp"` yields zero flows.

@@ -78,6 +78,32 @@ func TestGolden(t *testing.T) {
 	}
 }
 
+func TestBPFFilterYieldsNoFlows(t *testing.T) {
+	src, err := capture.OpenFile(filepath.Join("..", "..", "testdata", "pcap", "dns.pcap"), false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = src.Close() }()
+	if err := src.SetFilter("tcp"); err != nil {
+		t.Fatal(err)
+	}
+	p := New(testOptions())
+	var buf bytes.Buffer
+	sink, err := NewJSONLSink(&buf, p.Snapshot())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := Run(context.Background(), src, p, sink, 0); err != nil {
+		t.Fatal(err)
+	}
+	_ = sink.Close()
+	for _, tk := range ticks(t, buf.Bytes()) {
+		if len(tk.Flows) != 0 {
+			t.Fatalf("--bpf tcp on dns.pcap produced flows: %+v", tk.Flows)
+		}
+	}
+}
+
 func TestDeterministic(t *testing.T) {
 	a, b := runFixture(t, "demo", testOptions()), runFixture(t, "demo", testOptions())
 	if !bytes.Equal(a, b) {
