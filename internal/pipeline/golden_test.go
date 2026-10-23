@@ -34,6 +34,7 @@ func testOptions() Options {
 		RTTSamples:       20,
 		RetransWindow:    30 * time.Second,
 		GatewayMinIPs:    5,
+		ClassInterval:    10 * time.Second,
 		Server:           protocol.ServerInfo{Version: "test", Source: "file"},
 	}
 }

@@ -98,6 +98,7 @@ func run(ctx context.Context, cfg config.Config) error {
 		RTTSamples:       cfg.Enrich.RTTSamples,
 		RetransWindow:    cfg.Enrich.RetransWindow.D(),
 		GatewayMinIPs:    cfg.Enrich.GatewayMinIPs,
+		ClassInterval:    cfg.Enrich.ClassInterval.D(),
 		Server:           info,
 		Anonymize:        cfg.Anonymize,
 	})

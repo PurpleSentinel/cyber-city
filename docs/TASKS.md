@@ -219,7 +219,7 @@ Split into two PRs (AGENTS.md size rule):
 - **Do:** attribute MACs and vendors per D13, detect gateways, gate `mac` behind `--show-mac`.
 - **Done when:** the `gateway` and `web_https` vendor assertions in T pass, and `--show-mac` toggles `mac` fields in golden output (moved here from T1.7: MACs are first attributed in this task).
 
-### [ ] T2.10 Device class
+### [x] T2.10 Device class
 - **Depends:** T2.6, T2.9. **Touches:** `internal/enrich/class.go`.
 - **Do:** the C rules in order, re-evaluated every `class_interval`, with vendor lists as package-level data.
 - **Done when:** a table test has one case per rule plus precedence cases, and `demo` golden output has at least one host of every class.

@@ -1,6 +1,7 @@
 package pipeline
 
 import (
+	"cmp"
 	"fmt"
 	"net/netip"
 	"strings"
@@ -21,6 +22,7 @@ type hostState struct {
 	lastSeen  time.Time
 	sentSeen  time.Time // last_seen value in the most recent message
 	dirty     bool      // new or changed since the last tick
+	class     string    // device class from the last classify pass
 }
 
 // wire builds the protocol view of a host; callers hold p.mu.
@@ -48,7 +50,7 @@ func (p *Pipeline) wire(h *hostState) protocol.Host {
 		Services:    p.svc.For(h.addr),
 		Local:       h.local,
 		District:    h.district,
-		DeviceClass: protocol.ClassUnknown,
+		DeviceClass: cmp.Or(h.class, protocol.ClassUnknown),
 		FirstSeen:   h.firstSeen.UnixMilli(),
 		LastSeen:    h.lastSeen.UnixMilli(),
 	}
