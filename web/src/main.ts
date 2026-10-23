@@ -1,117 +1,170 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { INVALID_LINK_MESSAGE, checkSession } from "./net/session";
-import { parseMessage } from "./protocol";
+import { CAMERA, MAX_BUILDINGS, PALETTE, SCENE } from "./config";
+import { debugEnabled, installDebug } from "./debug";
+import type { ConnectionState } from "./net/connection";
+import { Connection, defaultDeps } from "./net/connection";
+import { INVALID_LINK_MESSAGE } from "./net/session";
+import { rendererInfo } from "./render/rendererInfo";
+import { Store } from "./state/store";
 import "./ui/styles.css";
 
-// Prototype renderer, now fed by the v1 protocol (T0.8b). The shaded city
-// (docs/VISUAL_SPEC.md) replaces it in Milestone 3.
+// App wiring (T3.1). The buildings are still the prototype's wireframe boxes;
+// the shaded city replaces them from T3.3a/T3.4 (docs/VISUAL_SPEC.md).
 
-const scene = new THREE.Scene();
-const fog = new THREE.FogExp2(0x05050a, 0.005);
-scene.fog = fog;
+const params = new URLSearchParams(window.location.search);
 
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.set(60, 40, 60);
-
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+const gpu = rendererInfo(renderer.getContext());
+const forced = params.get("quality");
+const quality: "high" | "low" = forced === "high" || forced === "low" ? forced : gpu.software ? "low" : "high";
+renderer.setPixelRatio(quality === "low" ? 1 : Math.min(window.devicePixelRatio, SCENE.maxPixelRatio));
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setClearColor(fog.color);
+renderer.setClearColor(PALETTE.bg);
 document.body.appendChild(renderer.domElement);
 
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(PALETTE.bg, SCENE.fogDensity);
+const camera = new THREE.PerspectiveCamera(CAMERA.fov, window.innerWidth / window.innerHeight, CAMERA.near, CAMERA.far);
+camera.position.set(...CAMERA.position);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
+controls.dampingFactor = CAMERA.damping;
+scene.add(new THREE.GridHelper(SCENE.groundSize, SCENE.gridDivisions, PALETTE.gridMajor, PALETTE.gridMinor));
 
-scene.add(new THREE.GridHelper(300, 100, 0x00f0ff, 0x052535));
-scene.add(new THREE.AmbientLight(0x112233));
-
-const maxBuildings = 1000;
+// ---- Prototype buildings (replaced in T3.4) ------------------------------
 const geometry = new THREE.BoxGeometry(2, 1, 2);
-geometry.translate(0, 0.5, 0); // origin at the bottom face
-const material = new THREE.MeshBasicMaterial({ color: 0x00f0ff, wireframe: true });
-const buildingMesh = new THREE.InstancedMesh(geometry, material, maxBuildings);
+geometry.translate(0, 0.5, 0);
+const buildingMesh = new THREE.InstancedMesh(
+  geometry,
+  new THREE.MeshBasicMaterial({ color: PALETTE.gridMajor, wireframe: true }),
+  MAX_BUILDINGS,
+);
+buildingMesh.count = 0;
 scene.add(buildingMesh);
 
-interface Host {
+interface Building {
   index: number;
   x: number;
   z: number;
   height: number;
-  targetHeight: number;
+  target: number;
 }
-
-const hosts = new Map<string, Host>();
+const buildings = new Map<string, Building>();
+const free: number[] = [];
 const dummy = new THREE.Object3D();
 
-function getOrCreateHost(ip: string, isLocal: boolean): Host | null {
-  const existing = hosts.get(ip);
-  if (existing) return existing;
-  if (hosts.size >= maxBuildings) return null;
-
-  const angle = Math.random() * Math.PI * 2;
-  const radius = isLocal ? 10 + Math.random() * 30 : 100;
-  const host: Host = {
-    index: hosts.size,
-    x: Math.cos(angle) * radius,
-    z: Math.sin(angle) * radius,
-    height: 1,
-    targetHeight: 1,
-  };
-  hosts.set(ip, host);
-  return host;
-}
-
-const statusDiv = document.getElementById("status");
-const setStatus = (text: string): void => {
-  if (statusDiv) statusDiv.textContent = text;
-};
-
-function onMessage(event: MessageEvent<string>): void {
-  const msg = parseMessage(event.data);
-  if (!msg) return;
-  for (const h of msg.hosts) getOrCreateHost(h.id, h.local);
-  if (msg.type !== "tick") return;
-  for (const flow of msg.flows) {
-    const grow = flow.bytes / 5000;
-    // Flows to multicast/broadcast groups name no host (docs/DECISIONS.md D21).
-    for (const id of [flow.src, flow.dst]) {
-      const host = hosts.get(id);
-      if (host) host.targetHeight = Math.min(60, host.targetHeight + grow);
+const store = new Store();
+store.subscribe({
+  reset() {
+    buildings.clear();
+    free.length = 0;
+    buildingMesh.count = 0;
+  },
+  hostAdded(h) {
+    if (buildings.size >= MAX_BUILDINGS) return;
+    const index = free.pop() ?? buildingMesh.count++;
+    const angle = Math.random() * Math.PI * 2;
+    const radius = h.local ? 10 + Math.random() * 30 : 100;
+    buildings.set(h.id, { index, x: Math.cos(angle) * radius, z: Math.sin(angle) * radius, height: 1, target: 1 });
+  },
+  hostRemoved(id) {
+    const b = buildings.get(id);
+    if (!b) return;
+    buildings.delete(id);
+    dummy.scale.set(0, 0, 0);
+    dummy.updateMatrix();
+    buildingMesh.setMatrixAt(b.index, dummy.matrix);
+    free.push(b.index);
+  },
+  tick(t) {
+    for (const flow of t.flows) {
+      // Flows to multicast/broadcast groups name no host (docs/DECISIONS.md D21).
+      for (const id of [flow.src, flow.dst]) {
+        const b = buildings.get(id);
+        if (b) b.target = Math.min(60, b.target + flow.bytes / 5000);
+      }
     }
+  },
+});
+
+// ---- HUD -------------------------------------------------------------------
+const statusDiv = document.getElementById("status");
+const rendererDiv = document.getElementById("renderer");
+const warningDiv = document.getElementById("warning");
+const setText = (el: HTMLElement | null, text: string): void => {
+  if (el) el.textContent = text;
+};
+setText(rendererDiv, `Renderer: ${gpu.name}`);
+if (gpu.software && warningDiv) {
+  warningDiv.hidden = false;
+  setText(warningDiv, "⚠ Software rendering — enable GPU acceleration");
+}
+
+function describe(s: ConnectionState): string {
+  switch (s.kind) {
+    case "connecting":
+      return "Connecting…";
+    case "live":
+      return "Live";
+    case "reconnecting":
+      return `Reconnecting in ${Math.ceil(s.inMs / 1000)}s`;
+    case "invalid":
+      return `Invalid link — ${INVALID_LINK_MESSAGE}`;
   }
 }
 
-// Same origin as the page: the Go binary serves both (docs/DECISIONS.md D3).
-// The session cookie from /auth is required before the socket will open.
-async function connect(): Promise<void> {
-  const session = await checkSession();
-  if (session === "invalid") {
-    setStatus(INVALID_LINK_MESSAGE);
-    return;
-  }
-  const wsUrl = new URL("/ws", window.location.href);
-  wsUrl.protocol = wsUrl.protocol === "https:" ? "wss:" : "ws:";
-  const ws = new WebSocket(wsUrl);
-  ws.onopen = () => setStatus("WS: Connected Live");
-  ws.onclose = () => setStatus("WS: Disconnected");
-  ws.onmessage = onMessage;
-}
-void connect();
+// ---- Debug hook --------------------------------------------------------------
+const debug = debugEnabled()
+  ? installDebug({
+      stats: () => ({
+        buildings: buildings.size,
+        highways: 0,
+        particles: 0,
+        ticks: store.ticks,
+        events: store.events.length,
+        renderer: gpu.name,
+        software: gpu.software,
+        quality,
+        lit: false,
+        wireframe: true,
+        shadows: false,
+      }),
+      hostIds: () => [...buildings.keys()],
+      lastEvents: () => store.events.map((e) => ({ id: e.id, kind: e.kind })),
+      probe: () => null,
+      poseHost: () => null,
+    })
+  : null;
 
+const connection = new Connection(
+  {
+    onHello: (h) => store.applyHello(h),
+    onTick: (t) => store.applyTick(t),
+    onState: (s) => setText(statusDiv, describe(s)),
+  },
+  defaultDeps(),
+);
+void connection.start();
+
+// ---- Frame loop ----------------------------------------------------------------
+let firstFrame = true;
 function animate(): void {
   requestAnimationFrame(animate);
   controls.update();
-
-  for (const host of hosts.values()) {
-    host.height = THREE.MathUtils.lerp(host.height, host.targetHeight, 0.05);
-    dummy.position.set(host.x, 0, host.z);
-    dummy.scale.set(1, host.height, 1);
+  for (const b of buildings.values()) {
+    b.height = THREE.MathUtils.lerp(b.height, b.target, 0.05);
+    dummy.position.set(b.x, 0, b.z);
+    dummy.scale.set(1, b.height, 1);
     dummy.updateMatrix();
-    buildingMesh.setMatrixAt(host.index, dummy.matrix);
+    buildingMesh.setMatrixAt(b.index, dummy.matrix);
   }
-  if (hosts.size > 0) buildingMesh.instanceMatrix.needsUpdate = true;
-
+  buildingMesh.instanceMatrix.needsUpdate = true;
   renderer.render(scene, camera);
+  if (firstFrame && store.server) {
+    firstFrame = false;
+    debug?.markReady();
+  }
 }
 animate();
 
