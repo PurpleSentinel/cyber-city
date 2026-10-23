@@ -214,7 +214,7 @@ Split into two PRs (AGENTS.md size rule):
 - **Do:** the retransmission algorithm in C; flow `retrans`; host `retrans_rate` over `retrans_window`.
 - **Done when:** `retrans` has `retrans_rate` 0.05 ± 0.01, and `web_https` has 0.
 
-### [ ] T2.9 MAC, vendor and gateway detection
+### [x] T2.9 MAC, vendor and gateway detection
 - **Depends:** T0.6, T2.5. **Touches:** `internal/enrich/mac.go`.
 - **Do:** attribute MACs and vendors per D13, detect gateways, gate `mac` behind `--show-mac`.
 - **Done when:** the `gateway` and `web_https` vendor assertions in T pass, and `--show-mac` toggles `mac` fields in golden output (moved here from T1.7: MACs are first attributed in this task).

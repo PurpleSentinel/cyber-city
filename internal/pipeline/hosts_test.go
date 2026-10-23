@@ -3,9 +3,11 @@ package pipeline
 import (
 	"net/netip"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/PurpleSentinel/cyber-city/internal/enrich"
 	"github.com/PurpleSentinel/cyber-city/internal/protocol"
 )
 
@@ -153,6 +155,39 @@ func TestRetransmissionRate(t *testing.T) {
 	}
 }
 
+// docs/TESTING.md web_https and gateway rows; T2.9 --show-mac toggle.
+func TestMACVendorAndGateway(t *testing.T) {
+	web := lastHosts(ticks(t, runFixture(t, "web_https", testOptions())))
+	if v := web["10.0.1.10"].Vendor; v == nil || !strings.Contains(*v, "Raspberry Pi") {
+		t.Fatalf("10.0.1.10 vendor %v, want Raspberry Pi", v)
+	}
+	if web["10.0.1.10"].MAC != nil {
+		t.Fatal("mac sent without --show-mac")
+	}
+	if h := web["203.0.113.10"]; h.MAC != nil || h.Vendor != nil {
+		t.Fatalf("external host has mac/vendor: %+v", h)
+	}
+
+	o := testOptions()
+	o.Server.ShowMAC = true
+	withMAC := lastHosts(ticks(t, runFixture(t, "web_https", o)))
+	pi, _ := enrich.FindPrefix("Raspberry Pi")
+	wantMAC := append(pi, 0, 1, 10).String() // fixturegen: vendor prefix + last 3 address bytes
+	if m := withMAC["10.0.1.10"].MAC; m == nil || *m != wantMAC {
+		t.Fatalf("--show-mac: mac %v, want %s", derefOr(m), wantMAC)
+	}
+
+	gw := lastHosts(ticks(t, runFixture(t, "gateway", o)))
+	if m := gw["10.0.1.1"].MAC; m == nil || *m != "02:00:00:00:00:01" {
+		t.Fatalf("gateway 10.0.1.1 mac %v", m)
+	}
+	for id, h := range gw {
+		if strings.HasPrefix(id, "203.0.113.") && (h.MAC != nil || h.Vendor != nil) {
+			t.Fatalf("external host %s has mac/vendor", id)
+		}
+	}
+}
+
 func TestScanProbesDoNotCreateServices(t *testing.T) {
 	h := lastHosts(ticks(t, runFixture(t, "scan_syn", testOptions())))["10.0.9.5"]
 	// Only the two open ports answered with SYN-ACK.
@@ -222,4 +257,11 @@ func TestMaxHostsEvictsLeastRecentlySeen(t *testing.T) {
 			t.Fatal("evicted host still in snapshot")
 		}
 	}
+}
+
+func derefOr(s *string) string {
+	if s == nil {
+		return "<nil>"
+	}
+	return *s
 }

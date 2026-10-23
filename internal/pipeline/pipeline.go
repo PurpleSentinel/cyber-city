@@ -27,6 +27,8 @@ type Options struct {
 	RTTSamples       int
 	// RetransWindow is the per-host retransmission-rate window.
 	RetransWindow time.Duration
+	// GatewayMinIPs marks a MAC as a router's (enrich.gateway_min_ips, D13).
+	GatewayMinIPs int
 	// Server describes the sensor in hello messages.
 	Server protocol.ServerInfo
 	// Anonymize pseudonymises host ids and hides addresses (--anonymize).
@@ -58,6 +60,7 @@ type Pipeline struct {
 	svc     *enrich.Services
 	rtt     *enrich.RTT
 	retx    *enrich.Retrans
+	macs    *enrich.MACs
 	flowRTT map[flowKey]float64 // most recent handshake RTT per flow key
 	dec     *Decoder
 	tracker *ServerTracker
@@ -88,6 +91,7 @@ func New(opts Options) *Pipeline {
 		rtt:       enrich.NewRTT(opts.HandshakeTimeout, max(1, opts.MaxTracked), max(1, opts.RTTSamples)),
 		flowRTT:   make(map[flowKey]float64),
 		retx:      enrich.NewRetrans(opts.RetransWindow, max(1, opts.MaxTracked)),
+		macs:      enrich.NewMACs(max(1, opts.GatewayMinIPs), max(1, opts.MaxHosts)),
 		dec:       NewDecoder(),
 		tracker:   NewServerTracker(opts.MaxTracked),
 		flows:     make(map[flowKey]*flowAgg),
@@ -138,6 +142,11 @@ func (p *Pipeline) add(r *Record) {
 	p.mu.Lock()
 	p.touch(r.Src, r.TS)
 	p.touch(r.Dst, r.TS)
+	for _, a := range p.macs.Observe(r.SrcMAC, r.Src, IsLocal(r.Src), r.DstMAC, r.Dst, IsLocal(r.Dst)) {
+		if h := p.hosts[a]; h != nil {
+			h.dirty = true
+		}
+	}
 	p.observeService(r, &d)
 	p.observeHandshake(r, &d, key)
 	if r.Proto == ProtoTCP && r.PayloadLen > 0 {
@@ -376,5 +385,6 @@ func (p *Pipeline) remove(h *hostState) {
 	p.svc.Forget(h.addr)
 	p.rtt.Forget(h.addr)
 	p.retx.Forget(h.addr)
+	p.macs.Forget(h.addr)
 	p.removed = append(p.removed, p.id.hostID(h.addr))
 }
