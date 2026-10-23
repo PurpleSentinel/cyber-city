@@ -11,6 +11,10 @@ updates:
     groups:
       web-dev-tooling:
         dependency-type: development
+    ignore:
+      # typescript-eslint supports typescript <6.1 (docs/DECISIONS.md D18).
+      - dependency-name: typescript
+        versions: [">=6.1.0"]
   - package-ecosystem: github-actions
     directory: /
     schedule:
