@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { parseBatch } from "./protocol";
+import { parseBatch } from "./prototype";
 import "./ui/styles.css";
 
 // Prototype renderer carried over unchanged in behaviour by T0.2. The shaded city

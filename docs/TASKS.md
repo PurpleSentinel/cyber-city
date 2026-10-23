@@ -48,7 +48,7 @@ Spec abbreviations: **P** = PROTOCOL.md, **C** = CONFIG.md, **V** = VISUAL_SPEC.
 - **Do:** create the `go` and `web` jobs from T: CI. Leave `e2e` and `live-smoke` as jobs that are skipped until T3.12 and T1.8. Configure Dependabot for gomod, npm (`/web`) and github-actions, weekly.
 - **Done when:** CI runs green on the PR. 👤 Owner enables branch protection requiring CI on `main`.
 
-### [ ] T0.4 Protocol types and conformance
+### [x] T0.4 Protocol types and conformance
 - **Depends:** T0.2. **Touches:** `internal/protocol`, `web/src/protocol.ts`, `web/test/protocol.test.ts`, `testdata/protocol/`.
 - **Do:**
   - Go structs for every P message and object, with JSON tags, `null` handling (pointer or nullable types) and empty arrays never marshalling as `null`.

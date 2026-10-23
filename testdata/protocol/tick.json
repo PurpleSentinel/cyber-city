@@ -1,0 +1,75 @@
+{
+  "v": 1,
+  "type": "tick",
+  "seq": 4182,
+  "ts": 1767225610100,
+  "window_ms": 100,
+  "stats": {
+    "packets": 812,
+    "bytes": 603112,
+    "flows": 2,
+    "hosts_total": 142,
+    "kernel_drops": 0,
+    "if_drops": 0
+  },
+  "districts": [],
+  "flows": [
+    {
+      "src": "10.0.1.10",
+      "dst": "203.0.113.10",
+      "proto": "tcp",
+      "service_port": 443,
+      "server_side": "dst",
+      "category": "https",
+      "packets": 12,
+      "bytes": 9812,
+      "tcp_flags": [
+        "ACK",
+        "PSH"
+      ],
+      "rtt_ms": 12.1,
+      "retrans": 0
+    },
+    {
+      "src": "fe80::1",
+      "dst": "ff02::1",
+      "proto": "icmpv6",
+      "service_port": null,
+      "server_side": null,
+      "category": "control",
+      "packets": 1,
+      "bytes": 86,
+      "tcp_flags": [],
+      "rtt_ms": null,
+      "retrans": 0
+    }
+  ],
+  "hosts": [
+    {
+      "id": "10.0.1.10",
+      "ip": "10.0.1.10",
+      "local": true,
+      "district": "corp",
+      "mac": null,
+      "vendor": "Raspberry Pi Foundation",
+      "device_class": "iot",
+      "services": [
+        {
+          "port": 22,
+          "proto": "tcp",
+          "category": "ssh",
+          "confirmed": true
+        }
+      ],
+      "geo": null,
+      "first_seen": 1767225600000,
+      "last_seen": 1767225610090,
+      "rtt_ms": 11.8,
+      "retrans_rate": 0
+    }
+  ],
+  "removed_hosts": [
+    "203.0.113.77"
+  ],
+  "events": []
+}
