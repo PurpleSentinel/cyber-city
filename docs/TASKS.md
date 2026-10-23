@@ -209,7 +209,7 @@ Split into two PRs (AGENTS.md size rule):
 - **Do:** the RTT algorithm in C; flow `rtt_ms`; host median over `rtt_samples`; pending-SYN expiry.
 - **Done when:** `web_https` has `rtt_ms` 12.0 ± 0.5, and a unit test shows a retransmitted SYN gives no sample.
 
-### [ ] T2.8 Retransmissions
+### [x] T2.8 Retransmissions
 - **Depends:** T2.4. **Touches:** `internal/enrich/retrans.go`.
 - **Do:** the retransmission algorithm in C; flow `retrans`; host `retrans_rate` over `retrans_window`.
 - **Done when:** `retrans` has `retrans_rate` 0.05 ± 0.01, and `web_https` has 0.

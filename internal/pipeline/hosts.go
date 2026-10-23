@@ -31,6 +31,7 @@ func (p *Pipeline) wire(h *hostState) protocol.Host {
 	}
 	return protocol.Host{
 		RTTMS:       rtt,
+		RetransRate: protocol.Round3(p.retx.Rate(h.addr, h.lastSeen)),
 		ID:          p.id.hostID(h.addr),
 		IP:          p.id.hostIP(h.addr),
 		Services:    p.svc.For(h.addr),
