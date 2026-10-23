@@ -1,0 +1,61 @@
+# Release pipeline (docs/TASKS.md T5.2). cybercity links libpcap through cgo,
+# so each architecture builds on a native runner: the two builds below are
+# skipped unless the runner matches, and release.yml runs this config once on
+# amd64 and once on arm64, appending to the same GitHub Release.
+version: 2
+
+project_name: cybercity
+
+before:
+  hooks:
+    - make web
+
+builds:
+  - id: linux-amd64
+    main: ./cmd/cybercity
+    binary: cybercity
+    skip: '{{ ne .Runtime.Goarch "amd64" }}'
+    env: [CGO_ENABLED=1]
+    goos: [linux]
+    goarch: [amd64]
+    flags: [-trimpath]
+    ldflags:
+      - -s -w -X github.com/PurpleSentinel/cyber-city/internal/buildinfo.Version={{ .Version }}
+  - id: linux-arm64
+    main: ./cmd/cybercity
+    binary: cybercity
+    skip: '{{ ne .Runtime.Goarch "arm64" }}'
+    env: [CGO_ENABLED=1]
+    goos: [linux]
+    goarch: [arm64]
+    flags: [-trimpath]
+    ldflags:
+      - -s -w -X github.com/PurpleSentinel/cyber-city/internal/buildinfo.Version={{ .Version }}
+
+archives:
+  - formats: [tar.gz]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - README.md
+      - SECURITY.md
+      - LICENSE*
+      - config/*.example.yaml
+
+checksum:
+  # One file per runner, so the two appends do not overwrite each other.
+  name_template: "checksums_{{ .Runtime.Goarch }}.txt"
+
+sboms:
+  - artifacts: archive
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-snapshot"
+
+changelog:
+  use: github-native
+
+release:
+  mode: append
+  # The owner reviews and publishes the draft (docs/TASKS.md T5.2 👤).
+  draft: true
+  use_existing_draft: true
