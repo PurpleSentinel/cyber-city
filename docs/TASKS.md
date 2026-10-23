@@ -168,7 +168,7 @@ Split into two PRs (AGENTS.md size rule):
 
 ## Milestone 2: Correct, enriched data
 
-### [ ] T2.1 Interface selection
+### [x] T2.1 Interface selection
 - **Depends:** T0.8. **Touches:** `internal/capture/ifaces.go`.
 - **Do:**
   - `--list-ifaces`.

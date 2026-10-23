@@ -35,6 +35,15 @@ func main() {
 		fmt.Println("cybercity", buildinfo.Version)
 		return
 	}
+	if cfg.ListIfaces {
+		ifs, err := capture.Interfaces()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "cybercity:", err)
+			os.Exit(1)
+		}
+		capture.PrintInterfaces(os.Stdout, ifs)
+		return
+	}
 	if err := notYet(cfg); err != nil {
 		fmt.Fprintln(os.Stderr, "cybercity:", err)
 		os.Exit(2)
@@ -55,8 +64,6 @@ func notYet(cfg config.Config) error {
 		flag string
 		task string
 	}{
-		{cfg.ListIfaces, "--list-ifaces", "T2.1"},
-		{cfg.Iface != "", "--iface", "T2.1"},
 		{cfg.BPF != "", "--bpf", "T2.2"},
 		{cfg.Districts != "", "--districts", "T2.11"},
 		{cfg.GeoIP != "", "--geoip", "T2.12"},
@@ -160,7 +167,11 @@ func openSource(cfg config.Config) (capture.Source, protocol.ServerInfo, error) 
 		info.Source = "file"
 		return src, info, err
 	}
-	live, err := capture.OpenFirstDevice(int32(cfg.Snaplen), cfg.Promiscuous) //nolint:gosec // snaplen validated to 128..65535
+	device, err := capture.ResolveIface(cfg.Iface)
+	if err != nil {
+		return nil, info, err
+	}
+	live, err := capture.OpenLive(device, int32(cfg.Snaplen), cfg.Promiscuous) //nolint:gosec // snaplen validated to 128..65535
 	if err != nil {
 		return nil, info, fmt.Errorf("capture: %w", err)
 	}
