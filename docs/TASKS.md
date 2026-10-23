@@ -292,7 +292,7 @@ Split into two PRs (AGENTS.md size rule):
 - **Do:** service-category columns and the SSH blink (V).
 - **Done when:** a unit test checks the bitmask packing, and a shader compile check passes (renderer `compile()` in e2e).
 
-### [ ] T3.6 Status shaders and lightning
+### [x] T3.6 Status shaders and lightning
 - **Depends:** T3.5. **Touches:** the building shader, `web/src/render/effects/lightning.ts`.
 - **Do:** degraded noise, spike flash, lightning, with triggers per V.
 - **Done when:** Vitest covers the trigger functions (degraded formula, spike and lightning thresholds).

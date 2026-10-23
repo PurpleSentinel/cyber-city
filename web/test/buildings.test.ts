@@ -48,6 +48,23 @@ describe("Buildings", () => {
     expect(scale.y).toBeCloseTo(g.height, 5);
   });
 
+  it("flashes on spikes, strikes lightning on huge ones, marks degraded hosts", () => {
+    const b = new Buildings(10);
+    b.add(host("calm", { rtt_ms: 20, retrans_rate: 0 }), { x: 0, z: 0 }, true);
+    b.add(host("slow", { rtt_ms: 500, retrans_rate: 0 }), { x: 4, z: 0 }, true);
+    const state = b.mesh.geometry.getAttribute("aState") as THREE.InstancedBufferAttribute;
+    expect(state.getX(0)).toBe(0);
+    expect(state.getX(1)).toBe(1);
+
+    b.applyBytes(new Map([["calm", 10_000]]), 100, 1_000); // 100 kB/s baseline
+    expect(b.applyBytes(new Map([["calm", 300_000]]), 100, 1_100)).toEqual([]); // 3 MB/s: flash only
+    b.frame(0.01);
+    expect(state.getY(0)).toBeGreaterThan(0.9);
+    b.frame(0.7);
+    expect(state.getY(0)).toBe(0); // flash decays over 0.6 s
+    expect(b.applyBytes(new Map([["calm", 5_000_000]]), 100, 1_200)).toEqual(["calm"]); // 50 MB/s: lightning
+  });
+
   it("packs services into the category bitmask", () => {
     const h = host("a", {
       services: [
