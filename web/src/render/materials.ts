@@ -87,7 +87,8 @@ export function buildingMaterial(): THREE.MeshStandardMaterial {
       )
       .replace(
         "vec4 diffuseColor = vec4( diffuse, opacity );",
-        `vec4 diffuseColor = vec4(mix(uCCBase, vCCColor, ${B.tint.toFixed(3)}), opacity);`,
+        `vec3 ccClass = mix(vCCColor, vec3(1.0, 0.0, 1.0), vCCState.x * 0.5); // degraded → magenta
+        vec4 diffuseColor = vec4(mix(uCCBase, ccClass, ${B.tint.toFixed(3)}), opacity);`,
       )
       .replace(
         "#include <emissivemap_fragment>",
@@ -98,18 +99,21 @@ export function buildingMaterial(): THREE.MeshStandardMaterial {
           float ax = abs(vCCLocal.x), az = abs(vCCLocal.z);
           // Edge strips: the four vertical edges and the roof perimeter.
           float edge = (!roof && ax > 1.0 - ew && az > 1.0 - ew) || (roof && max(ax, az) > 1.0 - ew) ? 1.0 : 0.0;
-          totalEmissiveRadiance += vCCColor * ${B.edgeIntensity.toFixed(3)} * edge;
-          if (roof) totalEmissiveRadiance += vCCColor * ${B.roofIntensity.toFixed(3)};
+          totalEmissiveRadiance += ccClass * ${B.edgeIntensity.toFixed(3)} * edge;
+          if (roof) totalEmissiveRadiance += ccClass * ${B.roofIntensity.toFixed(3)};
           // Fresnel rim keeps the holographic feel on a solid body.
           float facing = max(dot(normal, normalize(vViewPosition)), 0.0);
-          totalEmissiveRadiance += vCCColor * ${B.rimIntensity.toFixed(3)} * pow(1.0 - facing, ${B.rimPower.toFixed(1)});
+          totalEmissiveRadiance += ccClass * ${B.rimIntensity.toFixed(3)} * pow(1.0 - facing, ${B.rimPower.toFixed(1)});
           // Facade windows (VISUAL_SPEC "Buildings"): 6 columns per side face,
           // assigned to the set service-category bits in order, repeating.
           if (!roof && abs(vCCObjNormal.y) < 0.5) {
             float u = abs(vCCObjNormal.x) > 0.5 ? (vCCLocal.z + 1.0) * 0.5 : (vCCLocal.x + 1.0) * 0.5;
             float colF = u * 6.0;
             int col = int(min(floor(colF), 5.0));
-            float yM = vCCLocal.y * vCCHeight; // metres up the facade
+            // Degraded hosts: UV jitter of up to 0.15 units plus scanline noise.
+            float jitter = vCCState.x * 0.15 * sin(uCCTime * 23.0 + vCCLocal.y * 40.0);
+            float yM = vCCLocal.y * vCCHeight + jitter; // metres up the facade
+            totalEmissiveRadiance += ccClass * vCCState.x * 0.3 * step(0.5, fract(yM * 8.0 + uCCTime * 3.0));
             float inWindow = step(abs(fract(colF) - 0.5), 0.375) * step(0.25, fract(yM)) * step(fract(yM), 0.75);
             int services = int(vCCServices + 0.5);
             int count = 0;
@@ -140,7 +144,7 @@ export function buildingMaterial(): THREE.MeshStandardMaterial {
         }`,
       );
   };
-  mat.customProgramCacheKey = () => "cybercity-building-v1";
+  mat.customProgramCacheKey = () => "cybercity-building-v2";
   return mat;
 }
 

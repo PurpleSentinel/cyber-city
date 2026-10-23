@@ -7,6 +7,7 @@ import type { Host } from "../protocol";
 import { CATEGORIES } from "../protocol";
 import type { RateState } from "../state/rate";
 import { addSample, decayedRate, newRate, stepHeight, targetHeight } from "../state/rate";
+import { degradedLevel, sampleEffect } from "../state/status";
 import { buildingDepthMaterial, buildingMaterial } from "./materials";
 
 interface Building {
@@ -20,6 +21,7 @@ interface Building {
   fadeIn: number; // 0 → 1 over STATUS.fadeInS
   removing: number | null; // seconds into the fade-out, or null
   local: boolean;
+  flash: number; // spike flash 1 → 0 over STATUS.flashS
 }
 
 /** Category bitmask of a host's services, bit order as in CONFIG.md. */
@@ -81,11 +83,11 @@ export class Buildings {
     const b: Building = {
       id: h.id, index, x: at.x, z: at.z,
       base: onPlot ? MATERIALS.plot.height : 0,
-      height: 1, rate: newRate(), fadeIn: 0, removing: null, local: h.local,
+      height: 1, rate: newRate(), fadeIn: 0, removing: null, local: h.local, flash: 0,
     };
     this.byId.set(h.id, b);
     this.update(h);
-    this.state.setXYZW(index, 0, 0, 0, 0);
+    this.state.setY(index, 0).setZ(index, 0).setW(index, 0);
   }
 
   update(h: Host): void {
@@ -94,6 +96,7 @@ export class Buildings {
     this.tmp.setHex(DEVICE_COLORS[h.device_class] ?? DEVICE_COLORS.unknown ?? 0x00f0ff);
     this.color.setXYZ(b.index, this.tmp.r, this.tmp.g, this.tmp.b);
     this.services.setX(b.index, servicesMask(h));
+    this.state.setX(b.index, degradedLevel(h.rtt_ms, h.retrans_rate));
     this.color.needsUpdate = true;
     this.services.needsUpdate = true;
   }
@@ -110,13 +113,22 @@ export class Buildings {
     this.mesh.count = 0;
   }
 
-  /** Feeds one tick's per-host bytes into the rate model. */
-  applyBytes(bytes: Map<string, number>, windowMs: number, tickTs: number): void {
+  /**
+   * Feeds one tick's per-host bytes into the rate model, starting spike
+   * flashes, and returns the ids that should be struck by lightning.
+   */
+  applyBytes(bytes: Map<string, number>, windowMs: number, tickTs: number): string[] {
     this.nowTs = tickTs;
+    const strikes: string[] = [];
     for (const [id, n] of bytes) {
       const b = this.byId.get(id);
-      if (b) addSample(b.rate, n, windowMs, tickTs);
+      if (!b) continue;
+      const prev = decayedRate(b.rate, tickTs);
+      const effect = sampleEffect(prev, addSample(b.rate, n, windowMs, tickTs));
+      if (effect !== "none") b.flash = 1;
+      if (effect === "lightning") strikes.push(id);
     }
+    return strikes;
   }
 
   /** Advances animation by dt seconds and writes instance data. */
@@ -143,6 +155,8 @@ export class Buildings {
       this.dummy.scale.set(1, Math.max(scaleY, 1e-3), 1);
       this.dummy.updateMatrix();
       this.mesh.setMatrixAt(b.index, this.dummy.matrix);
+      b.flash = Math.max(0, b.flash - dt / STATUS.flashS);
+      this.state.setY(b.index, b.flash);
       this.state.setW(b.index, b.fadeIn);
     }
     for (const id of freed) {

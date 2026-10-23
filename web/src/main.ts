@@ -9,6 +9,7 @@ import { Connection, defaultDeps } from "./net/connection";
 import { INVALID_LINK_MESSAGE } from "./net/session";
 import type { Host } from "./protocol";
 import { Buildings } from "./render/buildings";
+import { Lightning } from "./render/effects/lightning";
 import { poseFor, probe } from "./render/probe";
 import { rendererInfo } from "./render/rendererInfo";
 import { Plots, addLights, configureRenderer, createGround, setEnvironment } from "./render/scene";
@@ -51,6 +52,8 @@ const plots = new Plots();
 scene.add(plots.mesh);
 const buildings = new Buildings();
 scene.add(buildings.mesh);
+const lightning = new Lightning();
+scene.add(lightning.group);
 const layout = new Layout();
 
 // ---- State → city -------------------------------------------------------------
@@ -81,7 +84,10 @@ store.subscribe({
   tick(t) {
     if (firstTickTs === 0) firstTickTs = t.ts;
     lastTickTs = t.ts;
-    buildings.applyBytes(bytesByHost(t.flows), t.window_ms, t.ts);
+    for (const id of buildings.applyBytes(bytesByHost(t.flows), t.window_ms, t.ts)) {
+      const g = buildings.geometry(id);
+      if (g) lightning.strike(g.x, g.z, g.base + g.height);
+    }
   },
 });
 
@@ -191,6 +197,7 @@ function animate(now?: number): void {
   timer.update(now);
   const dt = Math.min(timer.getDelta(), 0.1);
   buildings.frame(dt, timer.getElapsed());
+  lightning.frame(dt);
   applyPose();
   controls.update();
   renderer.render(scene, camera);
