@@ -20,6 +20,8 @@ test("the city renders from the demo replay", async ({ page }) => {
   await expect
     .poll(() => page.evaluate(() => window.__cybercity!.lastEvents().map((e) => e.kind)), { timeout: 25_000 })
     .toContain("port_scan");
+  await expect(page.locator("#eventlog li").first()).toBeVisible();
+  await expect(page.locator("#eventlog .footer")).toHaveText("Heuristic detections — not an IDS");
 
   // Headless Chromium renders with SwiftShader: the warning shows and quality drops.
   const stats = await page.evaluate(() => window.__cybercity!.stats());

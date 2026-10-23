@@ -21,6 +21,7 @@ import { Plots, addLights, configureRenderer, createGround, setEnvironment } fro
 import { HighwayModel } from "./state/highways";
 import { bytesByHost } from "./state/rate";
 import { Store } from "./state/store";
+import { EventLog } from "./ui/eventlog";
 import { HELP_TEXT, Hud, MovingRate, formatHosts, formatPps, formatRate } from "./ui/hud";
 import { InspectorView, inspectorRows, tooltipText } from "./ui/inspector";
 import "./ui/styles.css";
@@ -93,6 +94,7 @@ const qualityCtl = new QualityController(
 );
 // ---- Inspector: hover tooltip, click panel, F fly-to, Esc clear ----------------
 const inspector = new InspectorView();
+const eventLog = new EventLog();
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
 let inspectedAt = 0;
@@ -214,6 +216,7 @@ store.subscribe({
     highwayModel.removeHost(id);
   },
   tick(t) {
+    if (t.events.length > 0) eventLog.render(store.events);
     if (firstTickTs === 0) firstTickTs = t.ts;
     lastTickTs = t.ts;
     highwayModel.applyTick(t.flows, t.window_ms, t.ts, (id) => buildings.has(id));
