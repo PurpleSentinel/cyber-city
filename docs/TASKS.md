@@ -253,7 +253,7 @@ Split into two PRs (AGENTS.md size rule):
   - Detect the renderer and show the software warning, falling back to low quality.
 - **Done when:** Vitest covers backoff timing (with fake timers), the seq-gap → reconnect path and the hello-rebuilds-state path.
 
-### [ ] T3.2 Rate and height model
+### [x] T3.2 Rate and height model
 - **Depends:** T3.1. **Touches:** `web/src/state/rate.ts`.
 - **Do:** EWMA, decay between ticks, target height, displayed height (all from V).
 - **Done when:** Vitest checks the V numeric examples (1 kB/s ≈ 2.8, 1 MB/s ≈ 19, 100 MB/s ≈ 31, cap 40) and that a height halves toward 1 within the half-life with no ticks.
