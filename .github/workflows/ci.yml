@@ -70,10 +70,22 @@ jobs:
     steps:
       - run: echo "enabled in T3.12"
 
-  # Enabled by T1.8 (docs/TESTING.md "Layers": live-capture smoke test).
+  # docs/TESTING.md "Layers": live capture as root, then the privilege drop.
   live-smoke:
-    if: ${{ false }}
     needs: [go]
     runs-on: ubuntu-latest
     steps:
-      - run: echo "enabled in T1.8"
+      - uses: actions/checkout@v7
+      - name: Install libpcap headers
+        run: sudo apt-get update -q && sudo apt-get install -yq libpcap-dev
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - name: Live capture on loopback (root)
+        run: |
+          go test -c -tags live -o "$RUNNER_TEMP/capture.test" ./internal/capture
+          sudo "$RUNNER_TEMP/capture.test" -test.v -test.run Live
+      - name: Privilege drop after opening the capture
+        run: |
+          go build -o bin/cybercity ./cmd/cybercity
+          tools/ci/privdrop-smoke.sh bin/cybercity

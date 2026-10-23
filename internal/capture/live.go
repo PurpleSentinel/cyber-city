@@ -26,7 +26,11 @@ func OpenFirstDevice(snaplen int32, promisc bool) (*Live, error) {
 	if len(devices) == 0 {
 		return nil, errors.New("no capture devices found")
 	}
-	device := devices[0].Name
+	return OpenLive(devices[0].Name, snaplen, promisc)
+}
+
+// OpenLive opens the named interface.
+func OpenLive(device string, snaplen int32, promisc bool) (*Live, error) {
 	handle, err := pcap.OpenLive(device, snaplen, promisc, 100*time.Millisecond)
 	if err != nil {
 		return nil, fmt.Errorf("open %s: %w", device, err)
