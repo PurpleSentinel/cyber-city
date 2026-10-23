@@ -19,6 +19,7 @@ import { Plots, addLights, configureRenderer, createGround, setEnvironment } fro
 import { HighwayModel } from "./state/highways";
 import { bytesByHost } from "./state/rate";
 import { Store } from "./state/store";
+import { HELP_TEXT, Hud, MovingRate, formatHosts, formatPps, formatRate } from "./ui/hud";
 import "./ui/styles.css";
 
 // App wiring: the shaded city of docs/VISUAL_SPEC.md.
@@ -82,10 +83,26 @@ const qualityCtl = new QualityController(
   },
   quality,
 );
+// Keys (VISUAL_SPEC "HUD and interaction"); F and Esc arrive with the inspector.
+const helpBox = document.getElementById("help");
+const helpList = document.getElementById("help-list");
+for (const line of HELP_TEXT) {
+  const li = document.createElement("li");
+  li.textContent = line;
+  helpList?.appendChild(li);
+}
 window.addEventListener("keydown", (e) => {
-  if ((e.key === "l" || e.key === "L") && !e.ctrlKey && !e.metaKey && !e.altKey) {
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.key === "l" || e.key === "L") {
     qualityCtl.toggle();
     composer.setPixelRatio(renderer.getPixelRatio());
+  } else if (e.key === " ") {
+    e.preventDefault();
+    paused = !paused;
+    if (!paused) connection.resync(); // dropped ticks: rebuild from a fresh hello
+    hud.set({ status: describe(lastState) });
+  } else if (e.key === "?") {
+    if (helpBox) helpBox.hidden = !helpBox.hidden;
   }
 });
 
@@ -174,7 +191,8 @@ function applyPose(): void {
 }
 
 // ---- HUD -------------------------------------------------------------------
-const statusDiv = document.getElementById("status");
+const hud = new Hud();
+const traffic = new MovingRate();
 const rendererDiv = document.getElementById("renderer");
 const warningDiv = document.getElementById("warning");
 const setText = (el: HTMLElement | null, text: string): void => {
@@ -186,7 +204,11 @@ if (gpu.software && warningDiv) {
   setText(warningDiv, "⚠ Software rendering — enable GPU acceleration");
 }
 
+let paused = false;
+let lastState: ConnectionState = { kind: "connecting" };
+
 function describe(s: ConnectionState): string {
+  if (paused) return "Paused";
   switch (s.kind) {
     case "connecting":
       return "Connecting…";
@@ -227,9 +249,27 @@ const debug = debugEnabled()
 
 const connection = new Connection(
   {
-    onHello: (h) => store.applyHello(h),
-    onTick: (t) => store.applyTick(t),
-    onState: (s) => setText(statusDiv, describe(s)),
+    onHello: (h) => {
+      store.applyHello(h);
+      traffic.clear();
+      hud.set({ source: h.server.source === "live" ? `Source: live ${h.server.iface ?? ""}` : "Source: file" });
+    },
+    onTick: (t) => {
+      if (paused) return; // ticks are dropped while paused; resume resyncs
+      store.applyTick(t);
+      traffic.add(t.ts, t.window_ms, t.stats);
+      const r = traffic.rates();
+      hud.set({
+        traffic: `${formatPps(r.pps)} · ${formatRate(r.bps)}`,
+        hosts: formatHosts(buildings.size, t.stats.hosts_total, layout.hiddenHosts),
+        drops: `Kernel drops ${t.stats.kernel_drops}`,
+        dropsAlert: t.stats.kernel_drops > 0,
+      });
+    },
+    onState: (s) => {
+      lastState = s;
+      hud.set({ status: describe(s) });
+    },
   },
   defaultDeps(),
 );
