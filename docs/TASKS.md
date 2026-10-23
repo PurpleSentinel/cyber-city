@@ -356,7 +356,7 @@ Split into two PRs (AGENTS.md size rule):
 - **Do:** as V; targets get lightning.
 - **Done when:** Vitest checks target sequencing and duration, and e2e sees the `demo` scan in `lastEvents()`.
 
-### [ ] T4.6 Meteor-shower effect
+### [x] T4.6 Meteor-shower effect
 - **Depends:** T3.4, T4.3. **Touches:** `web/src/render/effects/meteor.ts`.
 - **Do:** as V.
 - **Done when:** Vitest checks the sky colour timeline at t = 0, 1, 5, 8 s.
