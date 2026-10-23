@@ -46,7 +46,7 @@ Run everything through `make` so local runs and CI match.
 | Target | Does |
 |---|---|
 | `make help` | List targets |
-| `make setup` | `go mod download`, `npm ci` in `web/`, `npx playwright install --with-deps chromium` |
+| `make setup` | `go mod download`, `npm ci` in `web/`, Playwright Chromium (`tools/setup-playwright.sh`: with system libraries via `apt-get` where available) |
 | `make fixtures` | Regenerate `testdata/` with fixturegen |
 | `make oui` | Regenerate the OUI table (network access needed) |
 | `make web` | `vite build` → `web/dist` |
