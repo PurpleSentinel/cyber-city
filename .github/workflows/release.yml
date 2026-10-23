@@ -42,6 +42,10 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - run: npm ci
         working-directory: web
+      - name: Build static libpcap (DECISIONS D26)
+        run: |
+          sudo apt-get install -yq flex bison
+          tools/ci/static-libpcap.sh "$RUNNER_TEMP/libpcap" >> "$GITHUB_ENV"
       - uses: anchore/sbom-action/download-syft@v0
         with:
           syft-version: ${{ env.SYFT_VERSION }}
@@ -52,3 +56,11 @@ jobs:
           args: release --clean ${{ github.event_name == 'workflow_dispatch' && '--snapshot' || '' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Binary depends only on glibc
+        run: |
+          for b in dist/*/cybercity; do
+            readelf -d "$b" | grep NEEDED
+            if readelf -d "$b" | grep NEEDED | grep -qv -e 'libc.so' -e 'ld-linux'; then
+              echo "::error::$b links more than glibc"; exit 1
+            fi
+          done

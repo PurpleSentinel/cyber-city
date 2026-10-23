@@ -1,5 +1,6 @@
 # Release pipeline (docs/TASKS.md T5.2). cybercity links libpcap through cgo,
-# so each architecture builds on a native runner: the two builds below are
+# statically from tools/ci/static-libpcap.sh (CGO_CFLAGS/CGO_LDFLAGS from the
+# workflow; DECISIONS D26), so each architecture builds on a native runner: the two builds below are
 # skipped unless the runner matches, and release.yml runs this config once on
 # amd64 and once on arm64, appending to the same GitHub Release.
 version: 2
