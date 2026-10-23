@@ -18,6 +18,13 @@ make build     # builds the frontend and embeds it in bin/cybercity
 sudo bin/cybercity
 ```
 
-Then open http://localhost:8080. One process captures traffic and serves the page.
+Then open http://127.0.0.1:8080. One process captures traffic and serves the page.
 
-A no-root replay mode (`--read capture.pcap`) arrives in T0.8; see [docs/TASKS.md](docs/TASKS.md) for progress. Contributors: start with [AGENTS.md](AGENTS.md).
+**No root needed:** replay the bundled synthetic capture instead of capturing live:
+
+```bash
+bin/cybercity --read testdata/pcap/demo.pcap --loop
+bin/cybercity --read testdata/pcap/demo.pcap --dump-json -   # print the protocol messages
+```
+
+See [docs/TASKS.md](docs/TASKS.md) for progress. Contributors: start with [AGENTS.md](AGENTS.md).

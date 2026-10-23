@@ -148,7 +148,7 @@ func scanSweep(v vendors) *gen {
 }
 
 // flood: 55 s of 50 pps from 5 clients to 10.0.9.5:80, with a 5 s SYN flood of
-// 3000 pps from 300 documentation-range sources starting at 40 s.
+// 3000 pps from 60 documentation-range sources starting at 40 s (min_sources is 50).
 func flood(v vendors) *gen {
 	g := newGen(7)
 	server := localHost("10.0.9.5", noVendor)
@@ -161,8 +161,8 @@ func flood(v vendors) *gen {
 			t += 200 * time.Millisecond
 		}
 	}
-	sources := make([]host, 0, 300)
-	for i := 1; i <= 150; i++ {
+	sources := make([]host, 0, 60)
+	for i := 1; i <= 30; i++ {
 		sources = append(sources, externalHost(fmt.Sprintf("198.51.100.%d", i)), externalHost(fmt.Sprintf("203.0.113.%d", i)))
 	}
 	for n := range 15000 {

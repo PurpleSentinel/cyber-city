@@ -118,7 +118,7 @@ Traffic between two hosts during this window, keyed by `(proto, src, dst, servic
 
 | Field | Type | Notes |
 |---|---|---|
-| `src`, `dst` | host id | `src` is the client if `server_side` is `"dst"`. |
+| `src`, `dst` | host id | `src` is the client if `server_side` is `"dst"`. `dst` may be a multicast or broadcast address with no Host object (DECISIONS D21). |
 | `proto` | `"tcp" \| "udp" \| "icmp" \| "icmpv6" \| "other"` | |
 | `service_port` | int or `null` | The port the server listens on (CONFIG.md, *Service port*). `null` for ICMP and other protocols. |
 | `server_side` | `"src" \| "dst" \| null` | `null` if unknown. |

@@ -78,6 +78,8 @@ func (c *Config) Validate() error {
 		return errors.New("--read and --iface are mutually exclusive")
 	case c.DumpJSON != "" && c.Read == "":
 		return errors.New("--dump-json requires --read")
+	case c.DumpJSON != "" && c.Loop:
+		return errors.New("--dump-json cannot be combined with --loop")
 	case c.Loop && c.Read == "":
 		return errors.New("--loop requires --read")
 	case c.ReplaySpeed < 0:

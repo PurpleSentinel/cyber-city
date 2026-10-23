@@ -2,19 +2,22 @@
 package main
 
 import (
-	"encoding/json"
+	"context"
 	"errors"
 	"fmt"
-	"log"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/PurpleSentinel/cyber-city/internal/buildinfo"
 	"github.com/PurpleSentinel/cyber-city/internal/capture"
 	"github.com/PurpleSentinel/cyber-city/internal/config"
 	"github.com/PurpleSentinel/cyber-city/internal/pipeline"
+	"github.com/PurpleSentinel/cyber-city/internal/protocol"
 	"github.com/PurpleSentinel/cyber-city/internal/server"
 	"github.com/PurpleSentinel/cyber-city/web"
 )
@@ -36,7 +39,12 @@ func main() {
 		fmt.Fprintln(os.Stderr, "cybercity:", err)
 		os.Exit(2)
 	}
-	run(cfg)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	if err := run(ctx, cfg); err != nil && !errors.Is(err, context.Canceled) {
+		fmt.Fprintln(os.Stderr, "cybercity:", err)
+		os.Exit(1)
+	}
 }
 
 // notYet rejects settings whose feature has not landed, naming the task that
@@ -49,8 +57,6 @@ func notYet(cfg config.Config) error {
 	}{
 		{cfg.ListIfaces, "--list-ifaces", "T2.1"},
 		{cfg.Iface != "", "--iface", "T2.1"},
-		{cfg.Read != "", "--read", "T0.8"},
-		{cfg.DumpJSON != "", "--dump-json", "T0.8"},
 		{cfg.BPF != "", "--bpf", "T2.2"},
 		{cfg.URLFile != "", "--url-file", "T1.1"},
 		{cfg.User != "", "--user", "T1.6"},
@@ -66,46 +72,97 @@ func notYet(cfg config.Config) error {
 	return nil
 }
 
-// run is still the prototype loop; T0.8 replaces it with internal/pipeline.Run.
-func run(cfg config.Config) {
-	live, err := capture.OpenFirstDevice(int32(cfg.Snaplen), cfg.Promiscuous) //nolint:gosec // snaplen validated to 128..65535
+func run(ctx context.Context, cfg config.Config) error {
+	src, info, err := openSource(cfg)
 	if err != nil {
-		log.Fatalf("capture: %v", err)
+		return err
 	}
-	defer live.Close()
-	slog.Info("capturing", "device", live.Device)
+	defer func() { _ = src.Close() }()
 
-	agg := pipeline.NewAggregator()
-	hub := server.NewHub()
+	p := pipeline.New(pipeline.Options{
+		Window:     cfg.Window.D(),
+		Heartbeat:  cfg.Server.Heartbeat.D(),
+		MaxTracked: cfg.Flows.MaxTracked,
+		Server:     info,
+	})
 
-	go func() {
-		ticker := time.NewTicker(cfg.Window.D())
-		defer ticker.Stop()
-		for range ticker.C {
-			flows := agg.Flush()
-			if len(flows) == 0 {
-				continue
-			}
-			payload, err := json.Marshal(flows)
-			if err != nil {
-				slog.Error("marshal", "err", err)
-				continue
-			}
-			hub.Broadcast(payload)
-		}
-	}()
+	if cfg.DumpJSON != "" {
+		return dumpJSON(ctx, cfg.DumpJSON, src, p)
+	}
 
+	hub := server.NewHub(p.Snapshot)
+	srv := &http.Server{
+		Addr:              cfg.Listen,
+		Handler:           server.Handler(hub, web.Dist()),
+		ReadHeaderTimeout: 10 * time.Second,
+	}
+	serveErr := make(chan error, 1)
 	go func() {
 		slog.Info("serving", "url", "http://"+cfg.Listen)
-		srv := &http.Server{
-			Addr:              cfg.Listen,
-			Handler:           server.Handler(hub, web.Dist()),
-			ReadHeaderTimeout: 10 * time.Second,
-		}
-		log.Fatal(srv.ListenAndServe())
+		serveErr <- srv.ListenAndServe()
+	}()
+	defer func() {
+		shutdown, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		_ = srv.Shutdown(shutdown)
 	}()
 
-	for packet := range live.Packets() {
-		agg.Add(packet)
+	pipeErr := make(chan error, 1)
+	go func() { pipeErr <- pipeline.Run(ctx, src, p, hub, cfg.ReplaySpeed) }()
+	select {
+	case err := <-serveErr:
+		return err
+	case err := <-pipeErr:
+		if err == nil {
+			// The capture file ended: keep serving the final state until interrupted.
+			slog.Info("replay finished; serving final state (Ctrl-C to exit)")
+			select {
+			case <-ctx.Done():
+				return nil
+			case err := <-serveErr:
+				return err
+			}
+		}
+		return err
 	}
+}
+
+func openSource(cfg config.Config) (capture.Source, protocol.ServerInfo, error) {
+	info := protocol.ServerInfo{Version: buildinfo.Version, ShowMAC: cfg.ShowMAC}
+	if cfg.Read != "" {
+		src, err := capture.OpenFile(cfg.Read, cfg.Loop)
+		info.Source = "file"
+		return src, info, err
+	}
+	live, err := capture.OpenFirstDevice(int32(cfg.Snaplen), cfg.Promiscuous) //nolint:gosec // snaplen validated to 128..65535
+	if err != nil {
+		return nil, info, fmt.Errorf("capture: %w", err)
+	}
+	slog.Info("capturing", "device", live.Device)
+	info.Source, info.Iface = "live", protocol.Ptr(live.Device)
+	return live, info, nil
+}
+
+func dumpJSON(ctx context.Context, path string, src capture.Source, p *pipeline.Pipeline) (err error) {
+	var w io.Writer = os.Stdout
+	if path != "-" {
+		f, err := os.Create(path) //nolint:gosec // operator-supplied output path
+		if err != nil {
+			return err
+		}
+		defer func() {
+			if cerr := f.Close(); err == nil {
+				err = cerr
+			}
+		}()
+		w = f
+	}
+	sink, err := pipeline.NewJSONLSink(w, p.Snapshot())
+	if err != nil {
+		return err
+	}
+	if err := pipeline.Run(ctx, src, p, sink, 0); err != nil {
+		return err
+	}
+	return sink.Close()
 }

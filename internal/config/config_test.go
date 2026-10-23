@@ -117,6 +117,7 @@ func TestValidationErrors(t *testing.T) {
 		{"read and iface", []string{"--read", "a.pcap", "--iface", "eth0"}, "", "mutually exclusive"},
 		{"dump without read", []string{"--dump-json", "-"}, "", "requires --read"},
 		{"loop without read", []string{"--loop"}, "", "--loop requires --read"},
+		{"dump with loop", []string{"--read", "a", "--dump-json", "-", "--loop"}, "", "cannot be combined"},
 		{"negative speed", []string{"--read", "a", "--replay-speed", "-1"}, "", "replay-speed"},
 		{"window too small", []string{"--window", "10ms"}, "", "out of range"},
 		{"window too large", []string{"--window", "2s"}, "", "out of range"},

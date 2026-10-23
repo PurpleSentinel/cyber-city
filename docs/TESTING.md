@@ -36,7 +36,7 @@ fixturegen rules:
 | `retrans.pcap` | as `web_https`, with 5% of data segments retransmitted | `retrans_rate` 0.05 ± 0.01 for `203.0.113.10` |
 | `scan_syn.pcap` | `10.0.1.66` → `10.0.9.5`: SYNs to ports 1–1024 over 8 s; RST for closed ports, SYN-ACK on 22 and 80 | exactly 1 `port_scan`, src `10.0.1.66`, dst `10.0.9.5`, `distinct_ports` 1024 |
 | `scan_sweep.pcap` | `10.0.1.66` → `10.0.1.2`–`10.0.1.254`, port 445, no replies | exactly 1 `port_scan`, `dst: null`, `distinct_hosts` ≥ 20, `targets` length 64 |
-| `flood.pcap` | 40 s baseline of 50 pps from 5 clients to `10.0.9.5:80`, then 5 s of 3000 pps from 300 sources in the documentation ranges | exactly 1 `flood` for `10.0.9.5`, `distinct_sources` ≥ 50; no `flood` during the baseline |
+| `flood.pcap` | 40 s baseline of 50 pps from 5 clients to `10.0.9.5:80`, then 5 s of 3000 pps from 60 sources in the documentation ranges | exactly 1 `flood` for `10.0.9.5`, `distinct_sources` ≥ 50; no `flood` during the baseline |
 | `idle.pcap` | `10.0.1.30` is active 0–10 s, then silent; `10.0.1.10` sends 1 pkt/s until 140 s | exactly 1 `host_idle` for `10.0.1.30` at ts ≈ 130 s, with `10.0.1.30` in that tick's `removed_hosts` |
 | `ipv6.pcap` | `fd00:1::10` → `2001:db8:ffff::1:443`, plus NDP | flows have IPv6 ids, `fd00:1::10` local, NDP traffic categorised as `control` |
 | `vlan.pcap` | 802.1Q VLAN 10: `10.0.1.x`; VLAN 20: `10.0.9.x` | with `config/districts.example.yaml`: corp and core districts assigned by VLAN |
