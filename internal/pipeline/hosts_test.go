@@ -101,6 +101,35 @@ func TestServiceAssertions(t *testing.T) {
 	}
 }
 
+// docs/TESTING.md web_https row: rtt_ms 12.0 ± 0.5 (6 ms + 6 ms handshake).
+func TestHandshakeRTT(t *testing.T) {
+	ts := ticks(t, runFixture(t, "web_https", testOptions()))
+	near12 := func(v *float64) bool { return v != nil && *v >= 11.5 && *v <= 12.5 }
+	var flowRTT bool
+	for _, tk := range ts {
+		for _, f := range tk.Flows {
+			if f.Category == protocol.CatHTTPS && near12(f.RTTMS) {
+				flowRTT = true
+			}
+		}
+	}
+	if !flowRTT {
+		t.Fatal("no https flow carries rtt_ms ≈ 12")
+	}
+	hosts := lastHosts(ts)
+	for _, id := range []string{"10.0.1.10", "203.0.113.10"} {
+		if !near12(hosts[id].RTTMS) {
+			t.Fatalf("host %s rtt_ms %v, want ≈12", id, hosts[id].RTTMS)
+		}
+	}
+	// SYN probes answered by RST/SYN-ACK but never ACKed yield no samples.
+	for id, h := range lastHosts(ticks(t, runFixture(t, "scan_syn", testOptions()))) {
+		if h.RTTMS != nil {
+			t.Fatalf("scan fixture host %s has rtt %v", id, *h.RTTMS)
+		}
+	}
+}
+
 func TestScanProbesDoNotCreateServices(t *testing.T) {
 	h := lastHosts(ticks(t, runFixture(t, "scan_syn", testOptions())))["10.0.9.5"]
 	// Only the two open ports answered with SYN-ACK.

@@ -88,14 +88,16 @@ func run(ctx context.Context, cfg config.Config) error {
 	}
 
 	p := pipeline.New(pipeline.Options{
-		Window:      cfg.Window.D(),
-		Heartbeat:   cfg.Server.Heartbeat.D(),
-		MaxTracked:  cfg.Flows.MaxTracked,
-		MaxHosts:    cfg.MaxHosts,
-		IdleTimeout: cfg.Hosts.IdleTimeout.D(),
-		MaxServices: cfg.Hosts.MaxServices,
-		Server:      info,
-		Anonymize:   cfg.Anonymize,
+		Window:           cfg.Window.D(),
+		Heartbeat:        cfg.Server.Heartbeat.D(),
+		MaxTracked:       cfg.Flows.MaxTracked,
+		MaxHosts:         cfg.MaxHosts,
+		IdleTimeout:      cfg.Hosts.IdleTimeout.D(),
+		MaxServices:      cfg.Hosts.MaxServices,
+		HandshakeTimeout: cfg.Enrich.HandshakeTimeout.D(),
+		RTTSamples:       cfg.Enrich.RTTSamples,
+		Server:           info,
+		Anonymize:        cfg.Anonymize,
 	})
 
 	if cfg.DumpJSON != "" {

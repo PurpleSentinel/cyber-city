@@ -25,7 +25,12 @@ type hostState struct {
 
 // wire builds the protocol view of a host; callers hold p.mu.
 func (p *Pipeline) wire(h *hostState) protocol.Host {
+	var rtt *float64
+	if med, ok := p.rtt.HostMedian(h.addr); ok {
+		rtt = protocol.Ptr(protocol.Round1(med))
+	}
 	return protocol.Host{
+		RTTMS:       rtt,
 		ID:          p.id.hostID(h.addr),
 		IP:          p.id.hostIP(h.addr),
 		Services:    p.svc.For(h.addr),

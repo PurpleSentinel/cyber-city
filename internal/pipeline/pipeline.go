@@ -22,6 +22,9 @@ type Options struct {
 	IdleTimeout time.Duration
 	// MaxServices bounds services per host (hosts.max_services).
 	MaxServices int
+	// HandshakeTimeout and RTTSamples tune handshake RTT (enrich.*).
+	HandshakeTimeout time.Duration
+	RTTSamples       int
 	// Server describes the sensor in hello messages.
 	Server protocol.ServerInfo
 	// Anonymize pseudonymises host ids and hides addresses (--anonymize).
@@ -50,6 +53,8 @@ type Pipeline struct {
 	opts    Options
 	id      *identity
 	svc     *enrich.Services
+	rtt     *enrich.RTT
+	flowRTT map[flowKey]float64 // most recent handshake RTT per flow key
 	dec     *Decoder
 	tracker *ServerTracker
 
@@ -76,6 +81,8 @@ func New(opts Options) *Pipeline {
 		opts:      opts,
 		id:        newIdentity(opts.Anonymize, opts.AnonKey),
 		svc:       enrich.NewServices(max(1, opts.MaxServices)),
+		rtt:       enrich.NewRTT(opts.HandshakeTimeout, max(1, opts.MaxTracked), max(1, opts.RTTSamples)),
+		flowRTT:   make(map[flowKey]float64),
 		dec:       NewDecoder(),
 		tracker:   NewServerTracker(opts.MaxTracked),
 		flows:     make(map[flowKey]*flowAgg),
@@ -127,7 +134,43 @@ func (p *Pipeline) add(r *Record) {
 	p.touch(r.Src, r.TS)
 	p.touch(r.Dst, r.TS)
 	p.observeService(r, &d)
+	p.observeHandshake(r, &d, key)
 	p.mu.Unlock()
+}
+
+// observeHandshake feeds TCP handshake packets to the RTT tracker; callers
+// hold p.mu.
+func (p *Pipeline) observeHandshake(r *Record, d *Direction, key flowKey) {
+	if r.Proto != ProtoTCP || d.ServerSide != SideDst || d.ServicePort == nil {
+		return
+	}
+	fromClient := r.Src == d.Src
+	cport := r.SrcPort
+	if !fromClient {
+		cport = r.DstPort
+	}
+	c := enrich.Conn{Client: netip.AddrPortFrom(d.Src, cport), Server: netip.AddrPortFrom(d.Dst, *d.ServicePort)}
+	syn, ack := r.Flags&FlagSYN != 0, r.Flags&FlagACK != 0
+	switch {
+	case fromClient && syn && !ack:
+		p.rtt.SYN(c, r.TS)
+	case !fromClient && syn && ack:
+		p.rtt.SYNACK(c)
+	case fromClient && ack && !syn:
+		ms, ok := p.rtt.ACK(c, r.TS)
+		if !ok {
+			return
+		}
+		if len(p.flowRTT) >= p.opts.MaxTracked {
+			clear(p.flowRTT) // bounded memory; values refill from new handshakes
+		}
+		p.flowRTT[key] = protocol.Round1(ms)
+		for _, a := range []netip.Addr{d.Src, d.Dst} {
+			if h := p.hosts[a]; h != nil {
+				h.dirty = true
+			}
+		}
+	}
 }
 
 // observeService records the service a server is seen providing. Only
@@ -241,6 +284,9 @@ func (p *Pipeline) tick(end time.Time) *protocol.Tick {
 		if f.side == SideDst {
 			wf.ServerSide = protocol.Ptr(protocol.SideDst)
 		}
+		if rtt, ok := p.flowRTT[k]; ok {
+			wf.RTTMS = protocol.Ptr(rtt)
+		}
 		t.Flows = append(t.Flows, wf)
 	}
 	clear(p.flows)
@@ -314,5 +360,6 @@ func (p *Pipeline) removeIdle(now time.Time) {
 func (p *Pipeline) remove(h *hostState) {
 	delete(p.hosts, h.addr)
 	p.svc.Forget(h.addr)
+	p.rtt.Forget(h.addr)
 	p.removed = append(p.removed, p.id.hostID(h.addr))
 }
