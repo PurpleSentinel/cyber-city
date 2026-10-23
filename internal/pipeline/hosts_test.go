@@ -50,6 +50,65 @@ func TestIdleHostsAreRemoved(t *testing.T) {
 	}
 }
 
+// lastHosts returns the most recent Host object seen for each id.
+func lastHosts(ts []protocol.Tick) map[string]protocol.Host {
+	out := map[string]protocol.Host{}
+	for _, tk := range ts {
+		for _, h := range tk.Hosts {
+			out[h.ID] = h
+		}
+	}
+	return out
+}
+
+func hasService(h protocol.Host, proto string, port int, confirmed bool) bool {
+	for _, s := range h.Services {
+		if s.Proto == proto && s.Port == port && s.Confirmed == confirmed {
+			return true
+		}
+	}
+	return false
+}
+
+// docs/TESTING.md fixture rows for services.
+func TestServiceAssertions(t *testing.T) {
+	cases := []struct {
+		fixture, host, proto string
+		port                 int
+		category             string
+	}{
+		{"web_https", "203.0.113.10", "tcp", 443, protocol.CatHTTPS},
+		{"dns", "10.0.1.1", "udp", 53, protocol.CatDNS},
+		{"ssh", "10.0.9.5", "tcp", 22, protocol.CatSSH},
+	}
+	for _, tc := range cases {
+		h, ok := lastHosts(ticks(t, runFixture(t, tc.fixture, testOptions())))[tc.host]
+		if !ok || !hasService(h, tc.proto, tc.port, true) {
+			t.Errorf("%s: %s should serve %s/%d confirmed; got %+v", tc.fixture, tc.host, tc.proto, tc.port, h.Services)
+			continue
+		}
+		for _, s := range h.Services {
+			if s.Port == tc.port && s.Category != tc.category {
+				t.Errorf("%s: category %s, want %s", tc.fixture, s.Category, tc.category)
+			}
+		}
+		// Clients do not become servers of their ephemeral ports.
+		for id, other := range lastHosts(ticks(t, runFixture(t, tc.fixture, testOptions()))) {
+			if id != tc.host && len(other.Services) > 0 {
+				t.Errorf("%s: client %s has services %+v", tc.fixture, id, other.Services)
+			}
+		}
+	}
+}
+
+func TestScanProbesDoNotCreateServices(t *testing.T) {
+	h := lastHosts(ticks(t, runFixture(t, "scan_syn", testOptions())))["10.0.9.5"]
+	// Only the two open ports answered with SYN-ACK.
+	if len(h.Services) != 2 || !hasService(h, "tcp", 22, true) || !hasService(h, "tcp", 80, true) {
+		t.Fatalf("scan target services %+v, want only confirmed 22 and 80", h.Services)
+	}
+}
+
 func TestHostResentOnlyWhenChanged(t *testing.T) {
 	p := New(testOptions())
 	base := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)

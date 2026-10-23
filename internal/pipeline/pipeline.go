@@ -7,6 +7,7 @@ import (
 
 	"github.com/gopacket/gopacket"
 
+	"github.com/PurpleSentinel/cyber-city/internal/enrich"
 	"github.com/PurpleSentinel/cyber-city/internal/protocol"
 )
 
@@ -19,6 +20,8 @@ type Options struct {
 	MaxHosts int
 	// IdleTimeout removes hosts silent for this long (packet time).
 	IdleTimeout time.Duration
+	// MaxServices bounds services per host (hosts.max_services).
+	MaxServices int
 	// Server describes the sensor in hello messages.
 	Server protocol.ServerInfo
 	// Anonymize pseudonymises host ids and hides addresses (--anonymize).
@@ -46,6 +49,7 @@ type flowAgg struct {
 type Pipeline struct {
 	opts    Options
 	id      *identity
+	svc     *enrich.Services
 	dec     *Decoder
 	tracker *ServerTracker
 
@@ -71,6 +75,7 @@ func New(opts Options) *Pipeline {
 	return &Pipeline{
 		opts:      opts,
 		id:        newIdentity(opts.Anonymize, opts.AnonKey),
+		svc:       enrich.NewServices(max(1, opts.MaxServices)),
 		dec:       NewDecoder(),
 		tracker:   NewServerTracker(opts.MaxTracked),
 		flows:     make(map[flowKey]*flowAgg),
@@ -121,7 +126,35 @@ func (p *Pipeline) add(r *Record) {
 	p.mu.Lock()
 	p.touch(r.Src, r.TS)
 	p.touch(r.Dst, r.TS)
+	p.observeService(r, &d)
 	p.mu.Unlock()
+}
+
+// observeService records the service a server is seen providing. Only
+// packets sent by the server count, so probes alone (scans) never create
+// services (docs/DECISIONS.md D23). Callers hold p.mu.
+func (p *Pipeline) observeService(r *Record, d *Direction) {
+	if d.ServerSide != SideDst || d.ServicePort == nil || r.Src != d.Dst || isGroup(d.Dst) {
+		return
+	}
+	port := *d.ServicePort
+	var confirmed bool
+	switch r.Proto {
+	case ProtoTCP:
+		if r.Flags&FlagRST != 0 {
+			return
+		}
+		confirmed = r.Flags&(FlagSYN|FlagACK) == FlagSYN|FlagACK
+	case ProtoUDP:
+		confirmed = r.SrcPort == port
+	default:
+		return
+	}
+	if p.svc.Observe(d.Dst, r.Proto.String(), port, Category(r.Proto, &port), confirmed, r.TS) {
+		if h := p.hosts[d.Dst]; h != nil {
+			h.dirty = true
+		}
+	}
 }
 
 // touch records activity for a host; callers hold p.mu.
@@ -220,7 +253,7 @@ func (p *Pipeline) tick(end time.Time) *protocol.Tick {
 	t.RemovedHosts, p.removed = p.removed, nil
 	for _, h := range p.hosts {
 		if h.dirty {
-			t.Hosts = append(t.Hosts, h.wire(p.id))
+			t.Hosts = append(t.Hosts, p.wire(h))
 			h.dirty, h.sentSeen = false, h.lastSeen
 		}
 	}
@@ -244,7 +277,7 @@ func (p *Pipeline) Snapshot() *protocol.Hello {
 		h.Districts = append(h.Districts, d)
 	}
 	for _, hs := range p.hosts {
-		h.Hosts = append(h.Hosts, hs.wire(p.id))
+		h.Hosts = append(h.Hosts, p.wire(hs))
 	}
 	protocol.SortHello(h)
 	return h
@@ -280,5 +313,6 @@ func (p *Pipeline) removeIdle(now time.Time) {
 
 func (p *Pipeline) remove(h *hostState) {
 	delete(p.hosts, h.addr)
+	p.svc.Forget(h.addr)
 	p.removed = append(p.removed, p.id.hostID(h.addr))
 }
