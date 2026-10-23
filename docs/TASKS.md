@@ -258,10 +258,10 @@ Split into two PRs (AGENTS.md size rule):
 - **Do:** EWMA, decay between ticks, target height, displayed height (all from V).
 - **Done when:** Vitest checks the V numeric examples (1 kB/s ≈ 2.8, 1 MB/s ≈ 19, 100 MB/s ≈ 31, cap 40) and that a height halves toward 1 within the half-life with no ticks.
 
-### [ ] T3.3 Deterministic layout
+### [x] T3.3 Deterministic layout
 - **Depends:** T3.1. **Touches:** `web/src/layout/*`.
 - **Do:** fnv1a, block probing, slot probing, Outlands rings and sectors (V).
-- **Done when:** Vitest shows 2000 random ids give no overlapping footprints, the same ids in a different order give identical positions, server districts take the centre block, and sector placement follows V.
+- **Done when:** Vitest shows 2000 random ids give no overlapping footprints, the same ids in the same order give identical positions and each host takes its home slot unless already taken (D24; most hosts are then order-independent), server districts take the centre block, and sector placement follows V.
 
 ### [ ] T3.3a Lighting rig, ground and district plots
 - **Depends:** T3.1, T3.3. **Touches:** `web/src/render/scene.ts`, `web/src/render/ground.ts`, `web/eslint.config.js`.
