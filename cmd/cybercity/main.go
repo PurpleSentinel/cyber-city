@@ -17,6 +17,7 @@ import (
 	"github.com/PurpleSentinel/cyber-city/internal/capture"
 	"github.com/PurpleSentinel/cyber-city/internal/config"
 	"github.com/PurpleSentinel/cyber-city/internal/districts"
+	"github.com/PurpleSentinel/cyber-city/internal/enrich"
 	"github.com/PurpleSentinel/cyber-city/internal/pipeline"
 	"github.com/PurpleSentinel/cyber-city/internal/protocol"
 	"github.com/PurpleSentinel/cyber-city/internal/server"
@@ -45,34 +46,12 @@ func main() {
 		capture.PrintInterfaces(os.Stdout, ifs)
 		return
 	}
-	if err := notYet(cfg); err != nil {
-		fmt.Fprintln(os.Stderr, "cybercity:", err)
-		os.Exit(2)
-	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	if err := run(ctx, cfg); err != nil && !errors.Is(err, context.Canceled) {
 		fmt.Fprintln(os.Stderr, "cybercity:", err)
 		os.Exit(1)
 	}
-}
-
-// notYet rejects settings whose feature has not landed, naming the task that
-// adds it (docs/TASKS.md), rather than silently ignoring them.
-func notYet(cfg config.Config) error {
-	pending := []struct {
-		set  bool
-		flag string
-		task string
-	}{
-		{cfg.GeoIP != "", "--geoip", "T2.12"},
-	}
-	for _, p := range pending {
-		if p.set {
-			return fmt.Errorf("%s is not implemented yet (arrives in %s)", p.flag, p.task)
-		}
-	}
-	return nil
 }
 
 func run(ctx context.Context, cfg config.Config) error {
@@ -87,6 +66,15 @@ func run(ctx context.Context, cfg config.Config) error {
 		}
 	}
 
+	var geo *enrich.Geo
+	if cfg.GeoIP != "" {
+		g, err := enrich.OpenGeo(cfg.GeoIP, *cfg.Geo.Home)
+		if err != nil {
+			return err
+		}
+		defer func() { _ = g.Close() }()
+		geo = g
+	}
 	var matcher *districts.Matcher
 	if cfg.Districts != "" {
 		defs, err := config.LoadDistricts(cfg.Districts)
@@ -97,6 +85,7 @@ func run(ctx context.Context, cfg config.Config) error {
 	}
 	p := pipeline.New(pipeline.Options{
 		Districts:        matcher,
+		Geo:              geo,
 		Window:           cfg.Window.D(),
 		Heartbeat:        cfg.Server.Heartbeat.D(),
 		MaxTracked:       cfg.Flows.MaxTracked,

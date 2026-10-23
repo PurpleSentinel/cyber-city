@@ -34,6 +34,8 @@ type Options struct {
 	ClassInterval time.Duration
 	// Districts assigns local hosts to configured districts (nil: auto only).
 	Districts *districts.Matcher
+	// Geo places external hosts in compass sectors (nil: --geoip not set).
+	Geo *enrich.Geo
 	// Server describes the sensor in hello messages.
 	Server protocol.ServerInfo
 	// Anonymize pseudonymises host ids and hides addresses (--anonymize).
@@ -365,6 +367,7 @@ func (p *Pipeline) Snapshot() *protocol.Hello {
 	}
 	h.Server.WindowMS = int(p.opts.Window / time.Millisecond)
 	h.Server.Anonymized = p.opts.Anonymize
+	h.Server.GeoIP = p.opts.Geo != nil
 	for _, d := range p.districts {
 		h.Districts = append(h.Districts, d)
 	}
@@ -410,6 +413,7 @@ func (p *Pipeline) remove(h *hostState) {
 	p.retx.Forget(h.addr)
 	p.macs.Forget(h.addr)
 	p.cls.Forget(h.addr)
+	p.opts.Geo.Forget(h.addr)
 	p.removed = append(p.removed, p.id.hostID(h.addr))
 }
 

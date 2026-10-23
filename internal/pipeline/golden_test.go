@@ -8,12 +8,14 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/PurpleSentinel/cyber-city/internal/capture"
 	"github.com/PurpleSentinel/cyber-city/internal/config"
 	"github.com/PurpleSentinel/cyber-city/internal/districts"
+	"github.com/PurpleSentinel/cyber-city/internal/enrich"
 	"github.com/PurpleSentinel/cyber-city/internal/protocol"
 )
 
@@ -65,9 +67,18 @@ func runFixture(t testing.TB, name string, opts Options) []byte {
 }
 
 // fixtureOptions returns the golden options for a fixture: vlan runs with the
-// example districts file (docs/TESTING.md "Golden tests").
+// example districts file and demo with the test GeoIP database, home London
+// (docs/TESTING.md "Golden tests").
 func fixtureOptions(t testing.TB, name string) Options {
 	o := testOptions()
+	if name == "demo" {
+		g, err := enrich.OpenGeo(filepath.Join("..", "..", "testdata", "geo", "test-city.mmdb"), [2]float64{51.5, -0.12})
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { _ = g.Close() })
+		o.Geo = g
+	}
 	if name == "vlan" {
 		defs, err := config.LoadDistricts(filepath.Join("..", "..", "config", "districts.example.yaml"))
 		if err != nil {
@@ -178,6 +189,32 @@ func TestVLANDistricts(t *testing.T) {
 	for id, d := range want {
 		if got[id] != d {
 			t.Errorf("%s district %q, want %q", id, got[id], d)
+		}
+	}
+}
+
+// T2.12: sectors only for external hosts with --geoip; null otherwise.
+func TestGeoSectors(t *testing.T) {
+	demo := ticks(t, runFixture(t, "demo", fixtureOptions(t, "demo")))
+	sectors := map[string]string{}
+	for _, tk := range demo {
+		for _, h := range tk.Hosts {
+			if h.Local && h.Geo != nil {
+				t.Fatalf("local host %s has geo %+v", h.ID, h.Geo)
+			}
+			if h.Geo != nil {
+				sectors[h.ID[:strings.LastIndex(h.ID, ".")]] = h.Geo.Sector + "/" + h.Geo.Country
+			}
+		}
+	}
+	if sectors["203.0.113"] != "NE/JP" || sectors["198.51.100"] != "W/US" {
+		t.Fatalf("sectors %v, want 203.0.113 → NE/JP and 198.51.100 → W/US", sectors)
+	}
+	for _, tk := range ticks(t, runFixture(t, "web_https", testOptions())) {
+		for _, h := range tk.Hosts {
+			if h.Geo != nil {
+				t.Fatalf("geo without --geoip: %+v", h)
+			}
 		}
 	}
 }
