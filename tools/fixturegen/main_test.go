@@ -29,6 +29,7 @@ var expectedSpan = map[string][2]time.Duration{
 	"vlan":       {4 * time.Second, 6 * time.Second},
 	"gateway":    {4 * time.Second, 6 * time.Second},
 	"demo":       {110 * time.Second, 121 * time.Second},
+	"many_hosts": {15 * time.Second, 17 * time.Second},
 }
 
 func hashDir(t *testing.T, dir string) map[string][32]byte {
@@ -105,8 +106,10 @@ func TestReadBack(t *testing.T) {
 	if total > 10<<20 {
 		t.Errorf("fixtures total %d bytes, limit 10 MB", total)
 	}
-	if demo := results[len(results)-1]; demo.name != "demo" || demo.size > 5<<20 {
-		t.Errorf("demo.pcap is %d bytes, limit 5 MB", demo.size)
+	for _, r := range results {
+		if r.name == "demo" && r.size > 5<<20 {
+			t.Errorf("demo.pcap is %d bytes, limit 5 MB", r.size)
+		}
 	}
 }
 

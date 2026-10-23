@@ -42,6 +42,7 @@ fixturegen rules:
 | `vlan.pcap` | 802.1Q VLAN 10: `10.0.1.x`; VLAN 20: `10.0.9.x` | with `config/districts.example.yaml`: corp and core districts assigned by VLAN |
 | `gateway.pcap` | 10 external IPs, all behind MAC `02:00:00:00:00:01` | `10.0.1.1` class `network`; no external host has a mac or vendor |
 | `demo.pcap` | 120 s mixed traffic: 40 local hosts across corp and core with assorted vendors, about 200 external hosts, web/DNS/SSH/mDNS/SSDP, one SYN scan at t = 60 s | used by end-to-end tests and the README GIF; < 5 MB |
+| `many_hosts.pcap` | 16 s: 1000 local clients in `10.0.16.0/22`, each exchanging a UDP datagram with its own server every 4 s (762 servers in the documentation ranges, 238 local in `10.0.30.0/24`): 2000 hosts | frame-time check (`web/e2e/perf.spec.ts`, T5.4); no golden file |
 
 ## Golden tests
 
@@ -108,5 +109,13 @@ Runs on pull requests and pushes to `main`. Jobs:
 - **web**: `npm ci`, `tsc --noEmit`, `eslint`, `vitest run`, `vite build`.
 - **e2e**: needs both jobs; builds the binary with the web bundle, then runs Playwright and uploads the screenshot.
 - **live-smoke**: runs `sudo go test -tags live ./internal/capture` on the `lo` interface.
+- **release-dry-run**: `goreleaser release --snapshot --clean` on amd64 (T5.2).
+- **perf** (non-blocking): see *Performance* below.
 
 A task counts as done only when all jobs are green.
+
+## Performance
+
+- **Throughput:** `go test -run XXX -bench BenchmarkReplay ./internal/pipeline` replays `demo.pcap` from memory through the whole pipeline (decode, enrichment, detectors, windows, JSON encoding) as fast as possible, without `-race`. It reports `pkts/s`; the target is ≥ 200k.
+- **Frame time:** `web/e2e/perf.spec.ts` starts its own server on `many_hosts.pcap` (2000 hosts), samples `requestAnimationFrame` deltas for 5 s, and writes p50/p95 to `web/e2e/artifacts/perf.json`. Under headless SwiftShader nearly all of the frame is software rasterisation, so these numbers track regressions, not real GPU frame rates.
+- **Baseline:** `testdata/perf/baseline.json`. The `perf` CI job runs `tools/perfcheck`, which fails its step (an error annotation, not the workflow) when a metric is more than 20% worse. After an intended change, update the baseline from the job summary.

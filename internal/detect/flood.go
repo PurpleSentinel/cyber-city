@@ -47,6 +47,10 @@ type Flood struct {
 	cfg   FloodConfig
 	alpha float64 // per-second EWMA weight
 	byDst map[netip.Addr]*floodTarget
+	// Buckets are whole seconds, so between second boundaries only targets
+	// that received packets can change state.
+	dirty   map[netip.Addr]struct{}
+	lastSec int64
 }
 
 // NewFlood returns a flood detector.
@@ -55,7 +59,7 @@ func NewFlood(cfg FloodConfig) *Flood {
 	if cfg.BaselineHalfLife > 0 {
 		alpha = 1 - math.Exp2(-float64(time.Second)/float64(cfg.BaselineHalfLife))
 	}
-	return &Flood{cfg: cfg, alpha: alpha, byDst: make(map[netip.Addr]*floodTarget)}
+	return &Flood{cfg: cfg, alpha: alpha, byDst: make(map[netip.Addr]*floodTarget), dirty: make(map[netip.Addr]struct{})}
 }
 
 // Packet counts the packet against its destination's current second.
@@ -69,6 +73,7 @@ func (f *Flood) Packet(p *Packet) {
 		f.byDst[p.Dst] = t
 	}
 	t.lastSeen = p.TS
+	f.dirty[p.Dst] = struct{}{}
 	sec := p.TS.Unix()
 	if n := len(t.buckets); n == 0 || t.buckets[n-1].sec < sec {
 		t.buckets = append(t.buckets, bucket{sec: sec, srcs: make(map[netip.Addr]struct{})})
@@ -119,58 +124,82 @@ func (f *Flood) suspect(pps, baseline float64) bool {
 	return pps >= math.Max(f.cfg.Multiplier*baseline, float64(f.cfg.MinPPS))
 }
 
-// Window evaluates each destination over the window ending at end.
+// Window evaluates destinations over the window ending at end: all of them
+// when a second boundary has passed, otherwise those with new packets.
 func (f *Flood) Window(end time.Time) []Candidate {
 	var out []Candidate
 	now := end.Unix()
-	win := int64(math.Ceil(f.cfg.Window.Seconds()))
-	for dst, t := range f.byDst {
-		f.fold(t, now)
-		i := 0
-		for i < len(t.buckets) && t.buckets[i].sec <= now-win {
-			i++
-		}
-		t.buckets = t.buckets[i:]
-		if len(t.buckets) == 0 && end.Sub(t.lastSeen) > floodIdleHalfLife*f.cfg.BaselineHalfLife {
-			delete(f.byDst, dst)
-			continue
-		}
-		pkts := 0
-		srcs := map[netip.Addr]struct{}{}
-		for _, b := range t.buckets {
-			pkts += b.pkts
-			for s := range b.srcs {
-				srcs[s] = struct{}{}
+	if now != f.lastSec {
+		f.lastSec = now
+		for dst, t := range f.byDst {
+			if c, ok := f.evaluate(dst, t, end); ok {
+				out = append(out, c)
 			}
 		}
-		pps := float64(pkts) / f.cfg.Window.Seconds()
-		t.active = t.hasBase && end.Sub(t.first) >= f.cfg.MinHistory &&
-			f.suspect(pps, t.baseline) &&
-			len(srcs) >= f.cfg.MinSources
-		if !t.active {
-			continue
-		}
-		target := dst
-		c := Candidate{
-			Kind:     protocol.EventFlood,
-			Key:      dst.String(),
-			Dst:      &target,
-			Targets:  []netip.Addr{target},
-			Severity: protocol.SeverityAlert,
-			Duration: 8 * time.Second,
-			Evidence: map[string]float64{
-				"pps":              math.Round(pps),
-				"baseline_pps":     math.Round(t.baseline*10) / 10,
-				"distinct_sources": float64(len(srcs)),
-				"window_s":         f.cfg.Window.Seconds(),
-			},
-		}
-		if len(srcs) == 1 {
-			for s := range srcs {
-				c.Src = &s
+	} else {
+		for dst := range f.dirty {
+			if t := f.byDst[dst]; t != nil {
+				if c, ok := f.evaluate(dst, t, end); ok {
+					out = append(out, c)
+				}
 			}
 		}
-		out = append(out, c)
 	}
+	clear(f.dirty)
 	return out
+}
+
+// evaluate updates one target's baseline and window and reports a flood.
+func (f *Flood) evaluate(dst netip.Addr, t *floodTarget, end time.Time) (Candidate, bool) {
+	now := end.Unix()
+	win := int64(math.Ceil(f.cfg.Window.Seconds()))
+	f.fold(t, now)
+	i := 0
+	for i < len(t.buckets) && t.buckets[i].sec <= now-win {
+		i++
+	}
+	t.buckets = t.buckets[i:]
+	if len(t.buckets) == 0 && end.Sub(t.lastSeen) > floodIdleHalfLife*f.cfg.BaselineHalfLife {
+		delete(f.byDst, dst)
+		return Candidate{}, false
+	}
+	pkts := 0
+	for _, b := range t.buckets {
+		pkts += b.pkts
+	}
+	pps := float64(pkts) / f.cfg.Window.Seconds()
+	t.active = t.hasBase && end.Sub(t.first) >= f.cfg.MinHistory && f.suspect(pps, t.baseline)
+	if !t.active {
+		return Candidate{}, false // the rate alone rules it out: skip the source union
+	}
+	srcs := map[netip.Addr]struct{}{}
+	for _, b := range t.buckets {
+		for s := range b.srcs {
+			srcs[s] = struct{}{}
+		}
+	}
+	if t.active = len(srcs) >= f.cfg.MinSources; !t.active {
+		return Candidate{}, false
+	}
+	target := dst
+	c := Candidate{
+		Kind:     protocol.EventFlood,
+		Key:      dst.String(),
+		Dst:      &target,
+		Targets:  []netip.Addr{target},
+		Severity: protocol.SeverityAlert,
+		Duration: 8 * time.Second,
+		Evidence: map[string]float64{
+			"pps":              math.Round(pps),
+			"baseline_pps":     math.Round(t.baseline*10) / 10,
+			"distinct_sources": float64(len(srcs)),
+			"window_s":         f.cfg.Window.Seconds(),
+		},
+	}
+	if len(srcs) == 1 {
+		for s := range srcs {
+			c.Src = &s
+		}
+	}
+	return c, true
 }

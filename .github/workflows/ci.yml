@@ -151,3 +151,31 @@ jobs:
           args: release --snapshot --clean
       - name: Snapshot contents
         run: ls -l dist/ && tar tzf dist/cybercity_*_linux_amd64.tar.gz && grep -c . dist/checksums_amd64.txt
+
+  # docs/TASKS.md T5.4: throughput and frame time against testdata/perf/
+  # baseline.json. Non-blocking: a regression of more than 20% fails the
+  # check step and raises an error annotation, but not the workflow.
+  perf:
+    needs: [e2e]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install libpcap headers
+        run: sudo apt-get update -q && sudo apt-get install -yq libpcap-dev
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - uses: actions/download-artifact@v7
+        with:
+          name: e2e-artifacts
+          path: web/
+        continue-on-error: true
+      - name: Replay benchmark (no -race)
+        run: go test -run XXX -bench BenchmarkReplay -benchtime 10x -count 5 ./internal/pipeline/ | tee bench.txt
+      - name: Compare with baseline
+        id: compare
+        continue-on-error: true
+        run: go run ./tools/perfcheck -baseline testdata/perf/baseline.json -bench bench.txt -e2e web/e2e/artifacts/perf.json
+      - name: Report regression
+        if: steps.compare.outcome == 'failure'
+        run: echo "::error title=Performance regression::A metric regressed by more than 20% against testdata/perf/baseline.json (see the job summary)."
