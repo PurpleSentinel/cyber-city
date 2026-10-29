@@ -182,7 +182,7 @@ jobs:
       - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           name: e2e-artifacts
           path: web/
