@@ -5,7 +5,7 @@ go 1.25.0
 toolchain go1.26.10
 
 require (
-	github.com/gopacket/gopacket v1.7.4
+	github.com/gopacket/gopacket v1.7.7
 	github.com/gorilla/websocket v1.5.3
 	github.com/maxmind/mmdbwriter v1.2.0
 	github.com/oschwald/maxminddb-golang/v2 v2.1.1
